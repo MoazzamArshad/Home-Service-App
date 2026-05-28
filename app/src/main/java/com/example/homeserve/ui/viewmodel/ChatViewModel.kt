@@ -29,6 +29,9 @@ class ChatViewModel : ViewModel() {
     private val _bookingInfo = MutableStateFlow<Booking?>(null)
     val bookingInfo: StateFlow<Booking?> = _bookingInfo.asStateFlow()
 
+    private val _otherPartyPhotoUrl = MutableStateFlow<String>("")
+    val otherPartyPhotoUrl: StateFlow<String> = _otherPartyPhotoUrl.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -59,7 +62,22 @@ class ChatViewModel : ViewModel() {
                     return@addSnapshotListener
                 }
                 if (snapshot != null && snapshot.exists()) {
-                    _bookingInfo.value = snapshot.toObject(Booking::class.java)?.copy(bookingId = snapshot.id)
+                    val booking = snapshot.toObject(Booking::class.java)?.copy(bookingId = snapshot.id)
+                    _bookingInfo.value = booking
+                    if (booking != null) {
+                        viewModelScope.launch {
+                            val otherPhoto = if (currentSenderRole == "customer") {
+                                try {
+                                    db.collection("providers").document(booking.providerId).get().await().getString("profilePhotoUrl") ?: ""
+                                } catch (e: Exception) { "" }
+                            } else {
+                                try {
+                                    db.collection("users").document(booking.userId).get().await().getString("profilePhotoUrl") ?: ""
+                                } catch (e: Exception) { "" }
+                            }
+                            _otherPartyPhotoUrl.value = otherPhoto
+                        }
+                    }
                 }
             }
     }

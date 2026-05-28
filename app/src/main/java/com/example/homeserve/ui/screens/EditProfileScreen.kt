@@ -1,7 +1,7 @@
 package com.example.homeserve.ui.screens
 
 import android.widget.Toast
- import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -17,11 +17,8 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,8 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -52,11 +47,8 @@ fun EditProfileScreen(
 
     var name by remember(userProfile) { mutableStateOf(userProfile?.name ?: "") }
     var email by remember(userProfile) { mutableStateOf(userProfile?.email ?: "") }
-    var address by remember(userProfile) { mutableStateOf(userProfile?.address ?: "") }
     var phone by remember(userProfile) { mutableStateOf(userProfile?.phone ?: viewModel.loggedInPhone) }
-    var passwordInput by remember(userProfile) { mutableStateOf(userProfile?.password ?: "") }
 
-    var showPasswordDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var selectedPhotoUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
@@ -223,33 +215,6 @@ fun EditProfileScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Home Address
-                        Text(
-                            text = "Home Address",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = Color(0xFF374151),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        OutlinedTextField(
-                            value = address,
-                            onValueChange = { address = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Your street address", color = Color(0xFF9CA3AF)) },
-                            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color(0xFF9CA3AF)) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color(0xFF111827),
-                                unfocusedTextColor = Color(0xFF111827),
-                                focusedContainerColor = Color(0xFFF3F4F6),
-                                unfocusedContainerColor = Color(0xFFF3F4F6),
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedBorderColor = BrandBlue,
-                                cursorColor = BrandBlue
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
                         // Phone Number (Locked/Read Only)
                         Text(
                             text = "Mobile Number",
@@ -275,34 +240,6 @@ fun EditProfileScreen(
                                 focusedBorderColor = Color.Transparent
                             )
                         )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-                        HorizontalDivider(color = Color(0xFFF3F4F6))
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Change Password Row Option
-                        Surface(
-                            onClick = { showPasswordDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFFEFF6FF),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Lock, contentDescription = null, tint = BrandBlue)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Change Password",
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = BrandBlue,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.weight(1f)
-                               )
-                               Icon(Icons.Default.ChevronRight, contentDescription = null, tint = BrandBlue)
-                            }
-                        }
                     }
                 }
 
@@ -322,9 +259,9 @@ fun EditProfileScreen(
                         
                         viewModel.updateCustomerProfile(
                             name = name.trim(),
-                            address = address.trim(),
+                            address = userProfile?.address ?: "",
                             email = email.trim(),
-                            password = passwordInput,
+                            password = userProfile?.password ?: "",
                             context = context,
                             newPhotoUri = selectedPhotoUri,
                             onResult = { success ->
@@ -387,117 +324,6 @@ fun EditProfileScreen(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
-    // Change Password Dialog
-    if (showPasswordDialog) {
-        var newPassword by remember { mutableStateOf("") }
-        var confirmPassword by remember { mutableStateOf("") }
-        var passwordError by remember { mutableStateOf<String?>(null) }
-        var isNewPasswordVisible by remember { mutableStateOf(false) }
-        var isConfirmPasswordVisible by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showPasswordDialog = false },
-            containerColor = Color.White,
-            shape = RoundedCornerShape(16.dp),
-            title = {
-                Text(
-                    text = "Change Password",
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF111827)
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        text = "Your account is secured via Phone OTP and Google. Setting a profile password adds an extra layer of credentials.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
-                    )
-
-                    // New Password
-                    OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (isNewPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
-                                Icon(image, contentDescription = "Toggle password visibility")
-                            }
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BrandBlue,
-                            cursorColor = BrandBlue
-                        )
-                    )
-
-                    // Confirm Password
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm Password") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
-                                Icon(image, contentDescription = "Toggle password visibility")
-                            }
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BrandBlue,
-                            cursorColor = BrandBlue
-                        )
-                    )
-
-                    if (passwordError != null) {
-                        Text(
-                            text = passwordError ?: "",
-                            color = Color(0xFFDC2626),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val cleanNew = newPassword.trim()
-                        val cleanConf = confirmPassword.trim()
-
-                        if (cleanNew.length < 6) {
-                            passwordError = "Password must be at least 6 characters."
-                            return@Button
-                        }
-                        if (cleanNew != cleanConf) {
-                            passwordError = "Passwords do not match."
-                            return@Button
-                        }
-
-                        passwordInput = cleanNew
-                        passwordError = null
-                        showPasswordDialog = false
-                        Toast.makeText(context, "Password updated. Click 'Save Changes' to apply.", Toast.LENGTH_LONG).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Update", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPasswordDialog = false }) {
-                    Text("Cancel", color = Color(0xFF6B7280))
                 }
             }
         )

@@ -131,6 +131,7 @@ class CustomerViewModel : ViewModel() {
         name: String,
         address: String,
         email: String = "",
+        phone: String = "",
         password: String = "",
         context: android.content.Context? = null,
         newPhotoUri: android.net.Uri? = null,
@@ -169,6 +170,7 @@ class CustomerViewModel : ViewModel() {
                     currentProfile.copy(
                         name = name,
                         email = resolvedEmail,
+                        phone = if (phone.isNotBlank()) phone else currentProfile.phone,
                         address = address,
                         password = password.ifBlank { currentProfile.password },
                         profilePhotoUrl = finalPhotoUrl
@@ -178,7 +180,7 @@ class CustomerViewModel : ViewModel() {
                         uid = currentUserId,
                         name = name,
                         email = resolvedEmail,
-                        phone = loggedInPhone,
+                        phone = if (phone.isNotBlank()) phone else loggedInPhone,
                         role = "user",
                         address = address,
                         password = password,

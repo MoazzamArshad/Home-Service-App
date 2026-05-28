@@ -69,7 +69,11 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Location", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
                             }
-                            val displayAddress = userProfile?.address?.takeIf { it.isNotBlank() } ?: "Set Address in Profile"
+                            val defaultSavedAddr = com.example.homeserve.ui.data.CustomerMockData.mockAddresses.find { it.isDefault }?.address
+                                ?: com.example.homeserve.ui.data.CustomerMockData.mockAddresses.firstOrNull()?.address
+                            val displayAddress = userProfile?.address?.takeIf { it.isNotBlank() }
+                                ?: defaultSavedAddr
+                                ?: "Set Address in Profile"
                             Text(
                                 text = displayAddress,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),

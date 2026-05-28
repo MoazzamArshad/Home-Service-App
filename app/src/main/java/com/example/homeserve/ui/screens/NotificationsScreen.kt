@@ -81,7 +81,15 @@ fun NotificationsScreen(
                 }
             } else {
                 items(CustomerMockData.notifications) { notification ->
-                    NotificationCard(notification)
+                    NotificationCard(
+                        notification = notification,
+                        onClick = {
+                            val index = CustomerMockData.notifications.indexOfFirst { it.id == notification.id }
+                            if (index != -1) {
+                                CustomerMockData.notifications[index] = notification.copy(read = true)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -89,9 +97,12 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationCard(notification: com.example.homeserve.ui.data.NotificationItem) {
+private fun NotificationCard(
+    notification: com.example.homeserve.ui.data.NotificationItem,
+    onClick: () -> Unit
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         color = if (notification.read) Color.White else Color(0xFFEFF6FF),
         border = if (!notification.read) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2563EB).copy(alpha = 0.1f)) else null

@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import com.example.homeserve.ui.notifications.NotificationHelper
 
 @Composable
@@ -31,6 +33,7 @@ fun AppNavGraph(
 ) {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("homeserve_prefs", Context.MODE_PRIVATE) }
+    var hasAutoRedirected by remember { mutableStateOf(false) }
 
     val customerViewModel: CustomerViewModel = viewModel()
     val providerViewModel: ProviderViewModel = viewModel()
@@ -50,41 +53,27 @@ fun AppNavGraph(
         }
     }
 
-    val savedRole = remember { sharedPrefs.getString("saved_role", null) }
-    val savedPhone = remember { sharedPrefs.getString("saved_phone", null) }
-
-    val startDest = remember {
-        if (savedRole != null && savedPhone != null) {
-            when (savedRole) {
-                "customer" -> Screen.Home.route
-                "provider" -> Screen.ProviderHome.route
-                "admin" -> Screen.AdminDashboard.route
-                else -> Screen.Selection.route
-            }
-        } else {
-            Screen.Selection.route
-        }
-    }
-
     LaunchedEffect(Unit) {
-        if (savedRole != null && savedPhone != null) {
-            when (savedRole) {
+        val currentRole = sharedPrefs.getString("saved_role", null)
+        val currentPhone = sharedPrefs.getString("saved_phone", null)
+        if (currentRole != null && currentPhone != null) {
+            when (currentRole) {
                 "customer" -> {
-                    if (savedPhone.contains("@")) {
-                        customerViewModel.signInWithGoogle(savedPhone, "Customer") {}
+                    if (currentPhone.contains("@")) {
+                        customerViewModel.signInWithGoogle(currentPhone, "Customer") {}
                     } else {
-                        customerViewModel.setCustomerId(savedPhone) {}
+                        customerViewModel.setCustomerId(currentPhone) {}
                     }
                 }
                 "provider" -> {
-                    if (savedPhone.contains("@")) {
-                        providerViewModel.signInWithGoogle(savedPhone, "Provider") {}
+                    if (currentPhone.contains("@")) {
+                        providerViewModel.signInWithGoogle(currentPhone, "Provider") {}
                     } else {
-                        providerViewModel.setProviderId(savedPhone) {}
+                        providerViewModel.setProviderId(currentPhone) {}
                     }
                 }
                 "admin" -> {
-                    adminViewModel.setLoggedInAdmin(savedPhone, "Admin User")
+                    adminViewModel.setLoggedInAdmin(currentPhone, "Admin User")
                 }
             }
         }
@@ -92,11 +81,51 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = startDest,
+        startDestination = Screen.Selection.route,
         modifier = modifier
     ) {
         // --- Selection Screen ---
         composable(Screen.Selection.route) {
+            // Commented out the 2-second auto-redirect state-management to allow clean manual role choice during presentations
+            /*
+            LaunchedEffect(Unit) {
+                if (!hasAutoRedirected) {
+                    val currentRole = sharedPrefs.getString("saved_role", null)
+                    val currentPhone = sharedPrefs.getString("saved_phone", null)
+                    if (currentRole != null && currentPhone != null) {
+                        kotlinx.coroutines.delay(2000)
+                        // Re-read preferences in case user clicked logout during the 2-second delay
+                        val activeRole = sharedPrefs.getString("saved_role", null)
+                        val activePhone = sharedPrefs.getString("saved_phone", null)
+                        if (activeRole != null && activePhone != null) {
+                            hasAutoRedirected = true
+                            when (activeRole) {
+                                "customer" -> {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                }
+                                "provider" -> {
+                                    navController.navigate(Screen.ProviderHome.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                }
+                                "admin" -> {
+                                    navController.navigate(Screen.AdminDashboard.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                }
+                            }
+                        } else {
+                            hasAutoRedirected = true
+                        }
+                    } else {
+                        hasAutoRedirected = true
+                    }
+                }
+            }
+            */
+
             AppSelectionScreen(
                 onRoleSelected = { role ->
                     when (role) {

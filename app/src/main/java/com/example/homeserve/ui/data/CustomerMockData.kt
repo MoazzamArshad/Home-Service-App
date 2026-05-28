@@ -86,15 +86,24 @@ object CustomerMockData {
         BookingItem("book-4", "AC Repair", "app-1", "2026-02-05", "3:00 PM - 5:00 PM", "cancelled", "123 Main Street, Apt 4B, New York, NY 10001", 399)
     )
 
-    val notifications = listOf(
+    val notifications = androidx.compose.runtime.mutableStateListOf(
         NotificationItem("notif-1", "Booking Confirmed", "Your Deep Cleaning service has been confirmed for Feb 15, 2026", "2 hours ago", false),
-        NotificationItem("notif-2", "Provider Assigned", "John Smith will be providing your Fan Installation service", "1 day ago", false),
+        NotificationItem("notif-2", "Provider Assigned", "Service Provider will be providing your Fan Installation service", "1 day ago", false),
         NotificationItem("notif-3", "Service Completed", "Your Tap Repair service has been completed. Please rate your experience", "2 days ago", true)
     )
 
-    val mockAddresses = mutableListOf(
-        AddressItem("addr-1", "Home", "Chungi Amer Sidhu, Lahore", "Lahore", "Punjab", "54000", true, 31.45036, 74.35334)
-    )
+    fun addNotification(title: String, message: String) {
+        val newNotif = NotificationItem(
+            id = "notif-${System.currentTimeMillis()}",
+            title = title,
+            message = message,
+            time = "Just now",
+            read = false
+        )
+        notifications.add(0, newNotif)
+    }
+
+    val mockAddresses = mutableListOf<AddressItem>()
 
     val timeSlots = listOf(
         "8:00 AM - 10:00 AM",

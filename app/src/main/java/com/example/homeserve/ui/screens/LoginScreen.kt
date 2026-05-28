@@ -72,6 +72,10 @@ fun LoginScreen(
             }
         } catch (e: ApiException) {
             e.printStackTrace()
+            if (e.statusCode == 12501 || e.statusCode == 16 || e.statusCode == 7) {
+                // User cancelled or network error during account choice. Do not show fallback dialog.
+                return@rememberLauncherForActivityResult
+            }
             fallbackErrorMsg = "Google Sign-In Error (Code: ${e.statusCode}). Please ensure Google Play Services are active and your SHA-1 is registered in the Firebase console."
             showFallbackSelector = true
         } catch (e: Exception) {

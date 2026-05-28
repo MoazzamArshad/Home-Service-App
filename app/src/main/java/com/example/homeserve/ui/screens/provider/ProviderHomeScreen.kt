@@ -94,7 +94,7 @@ fun ProviderHomeScreen(
                             color = Color.White
                         )
                         Text(
-                            text = profile?.name ?: "John Smith",
+                            text = profile?.name ?: "Service Provider",
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White.copy(alpha = 0.9f)
                         )

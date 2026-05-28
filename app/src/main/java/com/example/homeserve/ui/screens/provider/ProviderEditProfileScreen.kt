@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -498,15 +499,38 @@ fun ProviderEditProfileScreen(
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Slider(
-                                value = selectedRadius.toFloat(),
+                                value = selectedRadius.coerceIn(2, 50).toFloat(),
                                 onValueChange = { selectedRadius = it.toInt() },
-                                valueRange = 1f..50f,
-                                steps = 49,
+                                valueRange = 2f..50f,
+                                steps = 48,
                                 colors = SliderDefaults.colors(
                                     activeTrackColor = BrandBlue,
                                     thumbColor = BrandBlue
                                 )
                             )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                            ) {
+                                listOf(15, 25, 50, 75, 100).forEach { preset ->
+                                    val isSelected = selectedRadius == preset
+                                    SuggestionChip(
+                                        onClick = { selectedRadius = preset },
+                                        label = { Text("$preset km", fontSize = 11.sp) },
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            containerColor = if (isSelected) BrandBlue.copy(alpha = 0.1f) else Color.White,
+                                            labelColor = if (isSelected) BrandBlue else Color(0xFF4B5563)
+                                        ),
+                                        border = SuggestionChipDefaults.suggestionChipBorder(
+                                            enabled = true,
+                                            borderColor = if (isSelected) BrandBlue else Color(0xFFD1D5DB)
+                                        )
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))

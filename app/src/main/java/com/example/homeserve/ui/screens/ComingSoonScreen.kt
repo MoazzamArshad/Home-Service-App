@@ -419,29 +419,18 @@ private fun HelpSupportSection() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Still need help?", fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 16.sp)
+                Text("Need help?", fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Our customer care team is available 24/7", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4B5563))
+                Text("Get in touch with our team directly", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4B5563))
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { /* Dial helpline */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Call Helpline: 111-SERVE", fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = BrandBlue.copy(alpha = 0.15f))
-                Spacer(modifier = Modifier.height(16.dp))
+                
                 Text("Official Support Admins", fontWeight = FontWeight.Bold, color = Color(0xFF1F2937), fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 val adminEmails = listOf(
-                    "System Admin" to "admin@homeserve.com",
-                    "Support Head" to "support.admin@homeserve.com",
-                    "Executive Support" to "exec.admin@homeserve.com",
-                    "Operations Lead" to "ops.admin@homeserve.com"
+                    "Abdullah" to "bcsf23m535@pucit.edu.pk",
+                    "Moazzam" to "bcsf23m537@pucit.edu.pk",
+                    "Farhan" to "bcsf23m548@pucit.edu.pk"
                 )
                 
                 adminEmails.forEach { admin ->

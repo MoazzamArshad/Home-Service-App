@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,13 +31,15 @@ fun CustomerProfileSetupScreen(
     modifier: Modifier = Modifier,
     viewModel: CustomerViewModel = viewModel()
 ) {
+    val isGoogleSignIn = remember(viewModel.loggedInPhone) { viewModel.loggedInPhone.contains("@") }
     var name by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
+    var phoneInput by remember { mutableStateOf(if (isGoogleSignIn) "" else viewModel.loggedInPhone) }
+    
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
     
     val scrollState = rememberScrollState()
-    val isFormValid = name.isNotBlank()
+    val isFormValid = name.isNotBlank() && phoneInput.isNotBlank() && phoneInput.length >= 10
 
     Column(
         modifier = modifier
@@ -121,27 +124,33 @@ fun CustomerProfileSetupScreen(
                 )
             }
 
-            // Address Field (Optional)
+            // Phone Field (Required)
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                 Text(
-                    text = "Default Address (Optional)",
+                    text = if (isGoogleSignIn) "Phone Number *" else "Phone Number (Verified)",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF374151),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    placeholder = { Text("e.g. House 45-B, DHA Phase 5, Lahore", color = Color(0xFF9CA3AF)) },
+                    value = phoneInput,
+                    onValueChange = { if (isGoogleSignIn) phoneInput = it },
+                    enabled = isGoogleSignIn,
+                    placeholder = { Text("e.g. +92 300 1234567", color = Color(0xFF9CA3AF)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color(0xFF111827),
                         unfocusedTextColor = Color(0xFF111827),
+                        disabledTextColor = Color(0xFF6B7280),
                         focusedContainerColor = Color(0xFFF3F4F6),
                         unfocusedContainerColor = Color(0xFFF3F4F6),
+                        disabledContainerColor = Color(0xFFE5E7EB),
                         unfocusedBorderColor = Color.Transparent,
                         focusedBorderColor = BrandBlue,
                         cursorColor = BrandBlue
@@ -152,7 +161,7 @@ fun CustomerProfileSetupScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Providing your address helps us pre-fill it when booking service providers nearest to you.",
+                text = "Providing your full name and phone number helps service providers coordinate with you for bookings.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF6B7280),
                 lineHeight = 16.sp
@@ -168,11 +177,15 @@ fun CustomerProfileSetupScreen(
                 PrimaryButton(
                     text = "Let's Get Started",
                     onClick = {
-                        if (name.isNotBlank()) {
+                        if (name.isNotBlank() && phoneInput.isNotBlank()) {
                             if (!NetworkUtils.isNetworkAvailable(context)) {
                                 Toast.makeText(context, "No network connection. Please check your internet and try again.", Toast.LENGTH_LONG).show()
                             } else {
-                                viewModel.updateCustomerProfile(name.trim(), address.trim())
+                                viewModel.updateCustomerProfile(
+                                    name = name.trim(),
+                                    address = "",
+                                    phone = phoneInput.trim()
+                                )
                                 onContinueClick()
                             }
                         }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -492,7 +493,7 @@ fun ProviderProfileSetupScreen(
                 }
             }
 
-            // Service Radius Slider
+            // Service Radius Slider & Presets
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                 Text(
                     text = "Service Radius *",
@@ -505,10 +506,10 @@ fun ProviderProfileSetupScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Slider(
-                        value = radiusKm.toFloat(),
+                        value = radiusKm.coerceIn(2, 50).toFloat(),
                         onValueChange = { radiusKm = it.toInt() },
-                        valueRange = 2f..25f,
-                        steps = 22,
+                        valueRange = 2f..50f,
+                        steps = 48,
                         modifier = Modifier.weight(1f),
                         colors = SliderDefaults.colors(
                             activeTrackColor = BrandBlue,
@@ -521,6 +522,29 @@ fun ProviderProfileSetupScreen(
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color(0xFF111827)
                     )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    listOf(15, 25, 50, 75, 100).forEach { preset ->
+                        val isSelected = radiusKm == preset
+                        SuggestionChip(
+                            onClick = { radiusKm = preset },
+                            label = { Text("$preset km", fontSize = 12.sp) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = if (isSelected) BrandBlue.copy(alpha = 0.1f) else Color.White,
+                                labelColor = if (isSelected) BrandBlue else Color(0xFF4B5563)
+                            ),
+                            border = SuggestionChipDefaults.suggestionChipBorder(
+                                enabled = true,
+                                borderColor = if (isSelected) BrandBlue else Color(0xFFD1D5DB)
+                            )
+                        )
+                    }
                 }
             }
 

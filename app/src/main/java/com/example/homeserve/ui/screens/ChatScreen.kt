@@ -42,6 +42,7 @@ fun ChatScreen(
 
     val messages by viewModel.messages.collectAsState()
     val bookingInfo by viewModel.bookingInfo.collectAsState()
+    val otherPartyPhotoUrl by viewModel.otherPartyPhotoUrl.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     var textInput by remember { mutableStateOf("") }
@@ -106,12 +107,21 @@ fun ChatScreen(
                     color = Color.White.copy(alpha = 0.2f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = otherPartyAvatarText,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        if (otherPartyPhotoUrl.isNotBlank()) {
+                            coil.compose.AsyncImage(
+                                model = otherPartyPhotoUrl,
+                                contentDescription = "Profile Photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = otherPartyAvatarText,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
 

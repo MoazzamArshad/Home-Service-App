@@ -181,9 +181,6 @@ fun AdminLoginScreen(
                     )
                     Text(text = "Remember me", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4B5563))
                 }
-                TextButton(onClick = { showCryDialog = true }) {
-                    Text(text = "Forgot Password?", color = BrandBlue, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
-                }
             }
 
             if (errorMessage != null) {
@@ -257,10 +254,10 @@ fun AdminLoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally, 
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 ) {
-                    Text("😭", fontSize = 48.sp)
+                    Text("", fontSize = 48.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Cry about it.",
+                        text = "Feature under development. Contact developers.",
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 18.sp
@@ -276,7 +273,7 @@ fun AdminLoginScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Okay, I will 😢", fontWeight = FontWeight.Bold)
+                    Text("Close", fontWeight = FontWeight.Bold)
                 }
             }
         )

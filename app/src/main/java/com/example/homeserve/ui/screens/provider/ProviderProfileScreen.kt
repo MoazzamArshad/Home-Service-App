@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -345,15 +346,38 @@ fun ProviderProfileScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Slider(
-                            value = selectedRadius.toFloat(),
+                            value = selectedRadius.coerceIn(2, 50).toFloat(),
                             onValueChange = { selectedRadius = it.toInt() },
-                            valueRange = 1f..50f,
-                            steps = 49,
+                            valueRange = 2f..50f,
+                            steps = 48,
                             colors = SliderDefaults.colors(
                                 activeTrackColor = BrandBlue,
                                 thumbColor = BrandBlue
                             )
                         )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                        ) {
+                            listOf(15, 25, 50, 75, 100).forEach { preset ->
+                                val isSelected = selectedRadius == preset
+                                SuggestionChip(
+                                    onClick = { selectedRadius = preset },
+                                    label = { Text("$preset km", fontSize = 11.sp) },
+                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                        containerColor = if (isSelected) BrandBlue.copy(alpha = 0.1f) else Color.White,
+                                        labelColor = if (isSelected) BrandBlue else Color(0xFF4B5563)
+                                    ),
+                                    border = SuggestionChipDefaults.suggestionChipBorder(
+                                        enabled = true,
+                                        borderColor = if (isSelected) BrandBlue else Color(0xFFD1D5DB)
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             },
@@ -514,7 +538,7 @@ fun ProviderProfileScreen(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = profile?.name ?: "John Smith", 
+                                text = profile?.name ?: "Service Provider", 
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = Color(0xFF111827)
                             )
@@ -530,11 +554,11 @@ fun ProviderProfileScreen(
                     HorizontalDivider(color = Color(0xFFF3F4F6))
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    ProfileDetailItem(icon = Icons.Default.Phone, value = profile?.phone ?: "+1 234-567-8900")
+                    ProfileDetailItem(icon = Icons.Default.Phone, value = profile?.phone?.takeIf { it.isNotEmpty() } ?: (if (viewModel.loggedInPhone.contains("@")) "Not Provided" else viewModel.loggedInPhone))
                     Spacer(modifier = Modifier.height(12.dp))
-                    ProfileDetailItem(icon = Icons.Default.Email, value = profile?.email ?: "provider@example.com")
+                    ProfileDetailItem(icon = Icons.Default.Email, value = profile?.email?.takeIf { it.isNotEmpty() } ?: (if (viewModel.loggedInPhone.contains("@")) viewModel.loggedInPhone else "Not Provided"))
                     Spacer(modifier = Modifier.height(12.dp))
-                    ProfileDetailItem(icon = Icons.Default.LocationOn, value = profile?.address ?: "New York, NY")
+                    ProfileDetailItem(icon = Icons.Default.LocationOn, value = profile?.address ?: "Lahore, PK")
                     Spacer(modifier = Modifier.height(12.dp))
                     ProfileDetailItem(icon = Icons.Default.Explore, value = "Service Radius: ${profile?.radiusKm ?: 5} km")
                     

@@ -20,7 +20,7 @@ class ProviderViewModel : ViewModel() {
     private val _isProviderLoggedIn = MutableStateFlow(false)
     val isProviderLoggedIn: StateFlow<Boolean> = _isProviderLoggedIn.asStateFlow()
 
-    var currentProviderId = "test_provider_id_123"
+    var currentProviderId = ""
         private set
     var loggedInPhone = ""
         private set
@@ -544,9 +544,9 @@ class ProviderViewModel : ViewModel() {
             val categoryIdsString = selectedCategories.joinToString(",")
             val newProvider = Provider(
                 uid = currentProviderId,
-                name = if (tempFullName.isNotEmpty()) tempFullName else "John Smith",
-                phone = if (tempPhone.isNotEmpty()) tempPhone else "+1 234-567-8900",
-                email = if (loggedInPhone.contains("@")) loggedInPhone else "provider@example.com",
+                name = if (tempFullName.isNotEmpty()) tempFullName else "Service Provider",
+                phone = if (tempPhone.isNotEmpty()) tempPhone else (if (loggedInPhone.contains("@")) "" else loggedInPhone),
+                email = if (loggedInPhone.contains("@")) loggedInPhone else "",
                 categoryId = categoryIdsString,
                 bio = "Professional home service provider",
                 rating = 4.8,
@@ -557,7 +557,7 @@ class ProviderViewModel : ViewModel() {
                 radiusKm = tempRadiusKm,
                 providerLatitude = tempLatitude,
                 providerLongitude = tempLongitude,
-                address = if (tempAddress.isNotEmpty()) tempAddress else "New York, NY",
+                address = if (tempAddress.isNotEmpty()) tempAddress else "Lahore, PK",
                 profilePhotoUrl = finalPhotoUrl,
                 documentUrl = finalDocUrl,
                 idNumber = tempIdNumber

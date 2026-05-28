@@ -24,6 +24,7 @@ import com.example.homeserve.ui.components.PrimaryButton
 import com.example.homeserve.ui.data.CustomerMockData
 import com.example.homeserve.ui.theme.BrandBlue
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun BookingDateTimeScreen(
     onBackClick: () -> Unit,
@@ -32,6 +33,35 @@ fun BookingDateTimeScreen(
 ) {
     var selectedDate by remember { mutableStateOf("Feb 15, 2026") }
     var selectedTime by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedMillis = datePickerState.selectedDateMillis
+                        if (selectedMillis != null) {
+                            val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                            selectedDate = sdf.format(java.util.Date(selectedMillis))
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK", color = BrandBlue, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -92,7 +122,7 @@ fun BookingDateTimeScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Surface(
-                modifier = Modifier.fillMaxWidth().clickable { /* Show Calendar */ },
+                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White,
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
