@@ -90,14 +90,21 @@ fun ProviderDetailsScreen(
     }
     val documents = remember(provider.documentUrl) {
         if (provider.documentUrl.isNotEmpty()) {
-            val displayName = if (provider.documentUrl.startsWith("content://")) {
-                val lastSegment = provider.documentUrl.substringAfterLast("/")
-                val decodedSegment = Uri.decode(lastSegment)
-                val cleanName = decodedSegment.substringAfterLast("/")
-                val finalClean = cleanName.substringAfterLast(":")
-                if (finalClean.isNotBlank() && finalClean.contains(".")) finalClean else "id_card_front.jpg"
-            } else {
-                "id_card_front.jpg"
+            val displayName = when {
+                provider.documentUrl.startsWith("content://") -> {
+                    val lastSegment = provider.documentUrl.substringAfterLast("/")
+                    val decodedSegment = Uri.decode(lastSegment)
+                    val cleanName = decodedSegment.substringAfterLast("/")
+                    val finalClean = cleanName.substringAfterLast(":")
+                    if (finalClean.isNotBlank() && finalClean.contains(".")) finalClean else "id_card_front.jpg"
+                }
+                provider.documentUrl.startsWith("http://") || provider.documentUrl.startsWith("https://") -> {
+                    val lastSegment = provider.documentUrl.substringAfterLast("/")
+                    if (lastSegment.isNotBlank() && lastSegment.contains(".")) lastSegment else "provider_document.pdf"
+                }
+                else -> {
+                    "id_card_front.jpg"
+                }
             }
             listOf(ProviderDetailDoc(displayName, provider.documentUrl))
         } else {
@@ -304,6 +311,19 @@ fun ProviderDetailsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable {
+                                if (doc.url.startsWith("http://") || doc.url.startsWith("https://")) {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(doc.url))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        previewDocName = doc.name
+                                    }
+                                } else {
+                                    previewDocName = doc.name
+                                }
+                            }
                             .padding(16.dp)
                     ) {
                         Icon(Icons.Default.Description, contentDescription = null, tint = Color(0xFF9CA3AF))

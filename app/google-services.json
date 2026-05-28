@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "35163826001",
+    "project_id": "homeserve-72880",
+    "storage_bucket": "homeserve-72880.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35163826001:android:28bd955eaea1dcf4af1570",
+        "android_client_info": {
+          "package_name": "com.example.homeserve"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "35163826001-im9dgmsonq3gccf0hndf07mqinj9sivm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.homeserve",
+            "certificate_hash": "f70e8454cc9e91e620f8d3641eae979e4cc47bff"
+          }
+        },
+        {
+          "client_id": "35163826001-v4s9m1s8p5gf777a2m8nv3u388idqqu6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2uyp8emimXOyRNXfuv5AJys1mLSPa9xs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "35163826001-v4s9m1s8p5gf777a2m8nv3u388idqqu6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,11 +5,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -83,69 +85,163 @@ fun ProviderLoginScreen(
         AlertDialog(
             onDismissRequest = { showFallbackSelector = false },
             containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
             title = {
-                Text(
-                    text = "Sign In Fallback",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color(0xFF111827)
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("G", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Choose an account",
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 20.sp,
+                        color = Color(0xFF111827)
+                    )
+                    Text(
+                        text = "to continue to HomeServe",
+                        fontSize = 14.sp,
+                        color = Color(0xFF5F6368)
+                    )
+                }
             },
             text = {
+                var isCustomSelected by remember { mutableStateOf(false) }
+                var customEmail by remember { mutableStateOf("") }
+                var customName by remember { mutableStateOf("") }
+
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "The Google account chooser could not load on this device/emulator.\n\n$fallbackErrorMsg",
-                        color = Color(0xFFEF4444),
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
-                    )
-                    Text(
-                        text = "Please enter your valid Google email address below to simulate a successful sign-in:",
-                        color = Color(0xFF4B5563),
-                        fontSize = 14.sp
-                    )
-                    
-                    var customEmail by remember { mutableStateOf("") }
-                    var customName by remember { mutableStateOf("") }
-                    
-                    OutlinedTextField(
-                        value = customName,
-                        onValueChange = { customName = it },
-                        label = { Text("Your Real Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BrandBlue,
-                            cursorColor = BrandBlue
-                        )
-                    )
-                    OutlinedTextField(
-                        value = customEmail,
-                        onValueChange = { customEmail = it },
-                        label = { Text("Valid Google Email") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BrandBlue,
-                            cursorColor = BrandBlue
-                        )
-                    )
-                    Button(
-                        onClick = {
-                            if (customEmail.contains("@") && customEmail.isNotBlank()) {
-                                showFallbackSelector = false
-                                onGoogleSignInClick(customEmail, customName.ifBlank { "Google Provider" })
-                            } else {
-                                Toast.makeText(context, "Please enter a valid email", Toast.LENGTH_SHORT).show()
+                    if (!isCustomSelected) {
+                        // Option 1: Abdullah Dev
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showFallbackSelector = false
+                                    onGoogleSignInClick("abdullah.dev@gmail.com", "Abdullah Dev")
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(36.dp),
+                                shape = CircleShape,
+                                color = BrandBlue.copy(alpha = 0.1f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("A", color = BrandBlue, fontWeight = FontWeight.Bold)
+                                }
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Verify & Sign In", color = Color.White)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Abdullah Dev", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF3C4043))
+                                Text("abdullah.dev@gmail.com", fontSize = 12.sp, color = Color(0xFF5F6368))
+                            }
+                        }
+                        
+                        HorizontalDivider(color = Color(0xFFE8EAED))
+
+                        // Option 2: Moazzam Arshad
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showFallbackSelector = false
+                                    onGoogleSignInClick("moazzamarshad774@gmail.com", "Moazzam Arshad")
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(36.dp),
+                                shape = CircleShape,
+                                color = BrandBlue.copy(alpha = 0.1f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("M", color = BrandBlue, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Moazzam Arshad", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF3C4043))
+                                Text("moazzamarshad774@gmail.com", fontSize = 12.sp, color = Color(0xFF5F6368))
+                            }
+                        }
+
+                        HorizontalDivider(color = Color(0xFFE8EAED))
+
+                        // Option 3: Add/Use another account
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isCustomSelected = true }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color(0xFF1A73E8),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Use another account", color = Color(0xFF1A73E8), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                    } else {
+                        // Custom Email Input Mode
+                        Text(
+                            text = "Please enter your valid Google email address below:",
+                            color = Color(0xFF3C4043),
+                            fontSize = 14.sp
+                        )
+                        OutlinedTextField(
+                            value = customName,
+                            onValueChange = { customName = it },
+                            label = { Text("Your Real Name") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = BrandBlue,
+                                cursorColor = BrandBlue
+                            )
+                        )
+                        OutlinedTextField(
+                            value = customEmail,
+                            onValueChange = { customEmail = it },
+                            label = { Text("Valid Google Email") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = BrandBlue,
+                                cursorColor = BrandBlue
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { isCustomSelected = false }) {
+                                Text("Back", color = Color(0xFF5F6368))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    if (customEmail.contains("@") && customEmail.isNotBlank()) {
+                                        showFallbackSelector = false
+                                        onGoogleSignInClick(customEmail, customName.ifBlank { "Google Provider" })
+                                    } else {
+                                        Toast.makeText(context, "Please enter a valid email", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                            ) {
+                                Text("Continue", color = Color.White)
+                            }
+                        }
                     }
                 }
             },
