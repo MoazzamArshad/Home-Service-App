@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer Glowing Crest Circle (Cyan accent) -->
+    <path
+        android:strokeColor="#06B6D4"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M30,54 C30,40.75 40.75,30 54,30 C67.25,30 78,40.75 78,54 C78,67.25 67.25,78 54,78"
+        android:strokeAlpha="0.4" />
+        
+    <!-- Outer Glowing Crest Circle (Purple accent) -->
+    <path
+        android:strokeColor="#A855F7"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,78 C40.75,78 30,67.25 30,54"
+        android:strokeAlpha="0.4" />
+
+    <!-- Premium Shield Roof (Trust) in Pure White -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,34 L28,52 L34,57 L54,43 L74,57 L80,52 Z" />
+
+    <!-- Left Pillar (Cyan energy representing technology & precision) -->
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M36,56 L36,74 C36,75.1 36.9,76 38,76 L46,76 L46,56 Z" />
+
+    <!-- Right Pillar (Purple energy representing luxury & premium care) -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M62,56 L62,76 L70,76 C71.1,76 72,75.1 72,74 L72,56 Z" />
+
+    <!-- Floating Core Spark (Excellence & Sparkle) in Gold/Orange -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M54,50 L56.5,55 L61.5,57.5 L56.5,60 L54,65 L51.5,60 L46.5,57.5 L51.5,55 Z" />
+        
+    <!-- Golden Core Spark Glow -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M54,48 L58,55 L65,57.5 L58,60 L54,67 L50,60 L43,57.5 L50,55 Z"
+        android:fillAlpha="0.25" />
+
+</vector>

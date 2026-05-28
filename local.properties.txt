@@ -1,0 +1,2 @@
+sdk.dir=/opt/android-sdk
+gemini.api.key=AIzaSyA29T-j5YqHQtjp5vjHnioDc2148VRlYEo
