@@ -1,2 +1,2 @@
 # Home-Services-App
-Mobile Application to book and provide home services and utilities 
+A mobile application for booking and providing home services and utility solutions.
