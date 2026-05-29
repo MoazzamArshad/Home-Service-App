@@ -33,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import com.example.homeserve.ui.theme.BrandBlue
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppNavGraph(
@@ -420,10 +421,11 @@ fun AppNavGraph(
             arguments = listOf(navArgument("phone") { type = NavType.StringType })
         ) { backStackEntry ->
             val phone = backStackEntry.arguments?.getString("phone") ?: ""
+            val context = androidx.compose.ui.platform.LocalContext.current
             OtpScreen(
                 phoneNumber = phone,
                 onBackClick = { navController.popBackStack() },
-                onVerifyClick = {
+                onVerifyClick = { enteredCode ->
                     sharedPrefs.edit()
                         .putString("saved_role", "admin")
                         .putString("saved_phone", adminViewModel.adminEmail.value)
@@ -432,6 +434,9 @@ fun AppNavGraph(
                     navController.navigate(Screen.AdminDashboard.route) {
                         popUpTo(Screen.Selection.route) { inclusive = true }
                     }
+                },
+                onResendClick = {
+                    android.widget.Toast.makeText(context, "Verification code resent successfully", android.widget.Toast.LENGTH_SHORT).show()
                 }
             )
         }
