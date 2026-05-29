@@ -25,12 +25,11 @@ import com.example.homeserve.ui.theme.BrandBlue
 fun OtpScreen(
     phoneNumber: String,
     onBackClick: () -> Unit,
-    onVerifyClick: () -> Unit,
+    onVerifyClick: (String) -> Unit,
+    onResendClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var generatedOtp by remember { mutableStateOf((100000..999999).random().toString()) }
     var otpCode by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -76,50 +75,20 @@ fun OtpScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Beautiful Banner for Mock SMS Gateway
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "💬", fontSize = 24.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Mock SMS Gateway",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = Color(0xFF1E40AF)
-                        )
-                        Text(
-                            text = "Your verification code is: $generatedOtp",
-                            fontSize = 13.sp,
-                            color = Color(0xFF2563EB)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
             // Lock Icon
             Surface(
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(100.dp),
                 shape = CircleShape,
                 color = Color(0xFFEFF6FF)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(text = "🔐", fontSize = 40.sp)
+                    Text(text = "🔐", fontSize = 48.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Text(
                 text = "Code sent to +92 $phoneNumber",
@@ -128,7 +97,7 @@ fun OtpScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // OTP Input Fields
             BasicTextField(
@@ -136,7 +105,6 @@ fun OtpScreen(
                 onValueChange = { 
                     if (it.length <= 6) {
                         otpCode = it
-                        if (errorMessage != null) errorMessage = null
                     }
                 },
                 modifier = Modifier
@@ -179,29 +147,11 @@ fun OtpScreen(
                 }
             )
 
-            errorMessage?.let { error ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = error,
-                    color = Color.Red,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             PrimaryButton(
                 text = "Verify & Continue",
-                onClick = {
-                    if (otpCode == generatedOtp) {
-                        errorMessage = null
-                        onVerifyClick()
-                    } else {
-                        errorMessage = "Invalid verification code. Please try again!"
-                    }
-                },
+                onClick = { onVerifyClick(otpCode) },
                 enabled = otpCode.length == 6,
                 modifier = Modifier.height(54.dp)
             )
@@ -225,11 +175,7 @@ fun OtpScreen(
                     color = Color(0xFF6B7280)
                 )
                 TextButton(
-                    onClick = {
-                        generatedOtp = (100000..999999).random().toString()
-                        otpCode = ""
-                        errorMessage = null
-                    },
+                    onClick = onResendClick,
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(

@@ -25,6 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import com.example.homeserve.ui.notifications.NotificationHelper
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import com.example.homeserve.ui.theme.BrandBlue
 
 @Composable
 fun AppNavGraph(
@@ -139,9 +147,29 @@ fun AppNavGraph(
 
         // --- Provider Flow ---
         composable(Screen.ProviderLogin.route) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val activity = context as? android.app.Activity
+            var isLoading by remember { mutableStateOf(false) }
+
             ProviderLoginScreen(
                 onContinueClick = { phone ->
-                    navController.navigate(Screen.ProviderOtp.createRoute(phone))
+                    if (activity != null) {
+                        isLoading = true
+                        providerViewModel.sendOtp(
+                            phone = phone,
+                            activity = activity,
+                            onCodeSent = {
+                                isLoading = false
+                                navController.navigate(Screen.ProviderOtp.createRoute(phone))
+                            },
+                            onError = { err ->
+                                isLoading = false
+                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } else {
+                        android.widget.Toast.makeText(context, "Could not initialize activity", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 },
                 onGoogleSignInClick = { email, name ->
                     providerViewModel.signInWithGoogle(email, name) { exists ->
@@ -161,6 +189,19 @@ fun AppNavGraph(
                     }
                 }
             )
+
+            if (isLoading) {
+                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = BrandBlue)
+                    }
+                }
+            }
         }
 
         composable(
@@ -168,24 +209,68 @@ fun AppNavGraph(
             arguments = listOf(navArgument("phone") { type = NavType.StringType })
         ) { backStackEntry ->
             val phone = backStackEntry.arguments?.getString("phone") ?: ""
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val activity = context as? android.app.Activity
+            var isVerifying by remember { mutableStateOf(false) }
+
             ProviderOtpScreen(
                 phoneNumber = phone,
-                onVerifyClick = {
-                    providerViewModel.setProviderId(phone) { exists ->
-                        sharedPrefs.edit()
-                            .putString("saved_role", "provider")
-                            .putString("saved_phone", phone)
-                            .apply()
-                        if (exists) {
-                            navController.navigate(Screen.ProviderHome.route) {
-                                popUpTo(Screen.Selection.route) { inclusive = true }
+                onVerifyClick = { code ->
+                    isVerifying = true
+                    providerViewModel.verifyOtp(
+                        code = code,
+                        onSuccess = {
+                            providerViewModel.setProviderId(phone) { exists ->
+                                isVerifying = false
+                                sharedPrefs.edit()
+                                    .putString("saved_role", "provider")
+                                    .putString("saved_phone", phone)
+                                    .apply()
+                                if (exists) {
+                                    navController.navigate(Screen.ProviderHome.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.ProviderProfileSetup.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                }
                             }
-                        } else {
-                            navController.navigate(Screen.ProviderProfileSetup.route)
+                        },
+                        onError = { err ->
+                            isVerifying = false
+                            android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
                         }
+                    )
+                },
+                onResendClick = {
+                    if (activity != null) {
+                        providerViewModel.sendOtp(
+                            phone = phone,
+                            activity = activity,
+                            onCodeSent = {
+                                android.widget.Toast.makeText(context, "OTP code resent successfully", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { err ->
+                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        )
                     }
                 }
             )
+
+            if (isVerifying) {
+                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = BrandBlue)
+                    }
+                }
+            }
         }
 
         composable(Screen.ProviderProfileSetup.route) {
@@ -545,9 +630,29 @@ fun AppNavGraph(
 
         // --- Customer Flow ---
         composable(Screen.CustomerLogin.route) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val activity = context as? android.app.Activity
+            var isLoading by remember { mutableStateOf(false) }
+
             LoginScreen(
                 onContinueClick = { phone ->
-                    navController.navigate(Screen.CustomerOtp.createRoute(phone))
+                    if (activity != null) {
+                        isLoading = true
+                        customerViewModel.sendOtp(
+                            phone = phone,
+                            activity = activity,
+                            onCodeSent = {
+                                isLoading = false
+                                navController.navigate(Screen.CustomerOtp.createRoute(phone))
+                            },
+                            onError = { err ->
+                                isLoading = false
+                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } else {
+                        android.widget.Toast.makeText(context, "Could not initialize activity", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 },
                 onGoogleSignInClick = { email, name ->
                     customerViewModel.signInWithGoogle(email, name) { exists ->
@@ -567,6 +672,19 @@ fun AppNavGraph(
                     }
                 }
             )
+
+            if (isLoading) {
+                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = BrandBlue)
+                    }
+                }
+            }
         }
 
         composable(
@@ -574,25 +692,69 @@ fun AppNavGraph(
             arguments = listOf(navArgument("phone") { type = NavType.StringType })
         ) { backStackEntry ->
             val phone = backStackEntry.arguments?.getString("phone") ?: ""
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val activity = context as? android.app.Activity
+            var isVerifying by remember { mutableStateOf(false) }
+
             OtpScreen(
                 phoneNumber = phone,
                 onBackClick = { navController.popBackStack() },
-                onVerifyClick = {
-                    customerViewModel.setCustomerId(phone) { exists ->
-                        sharedPrefs.edit()
-                            .putString("saved_role", "customer")
-                            .putString("saved_phone", phone)
-                            .apply()
-                        if (exists) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Selection.route) { inclusive = true }
+                onVerifyClick = { code ->
+                    isVerifying = true
+                    customerViewModel.verifyOtp(
+                        code = code,
+                        onSuccess = {
+                            customerViewModel.setCustomerId(phone) { exists ->
+                                isVerifying = false
+                                sharedPrefs.edit()
+                                    .putString("saved_role", "customer")
+                                    .putString("saved_phone", phone)
+                                    .apply()
+                                if (exists) {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.CustomerProfileSetup.route) {
+                                        popUpTo(Screen.Selection.route) { inclusive = true }
+                                    }
+                                }
                             }
-                        } else {
-                            navController.navigate(Screen.CustomerProfileSetup.route)
+                        },
+                        onError = { err ->
+                            isVerifying = false
+                            android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
                         }
+                    )
+                },
+                onResendClick = {
+                    if (activity != null) {
+                        customerViewModel.sendOtp(
+                            phone = phone,
+                            activity = activity,
+                            onCodeSent = {
+                                android.widget.Toast.makeText(context, "OTP code resent successfully", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { err ->
+                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        )
                     }
                 }
             )
+
+            if (isVerifying) {
+                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = BrandBlue)
+                    }
+                }
+            }
         }
 
         composable(Screen.CustomerProfileSetup.route) {
