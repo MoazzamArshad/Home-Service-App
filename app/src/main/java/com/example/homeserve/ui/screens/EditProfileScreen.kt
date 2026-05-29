@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,6 +49,7 @@ fun EditProfileScreen(
     var name by remember(userProfile) { mutableStateOf(userProfile?.name ?: "") }
     var email by remember(userProfile) { mutableStateOf(userProfile?.email ?: "") }
     var phone by remember(userProfile) { mutableStateOf(userProfile?.phone ?: viewModel.loggedInPhone) }
+    var address by remember(userProfile) { mutableStateOf(userProfile?.address ?: "") }
 
     var showSuccessDialog by remember { mutableStateOf(false) }
     var selectedPhotoUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -240,6 +242,34 @@ fun EditProfileScreen(
                                 focusedBorderColor = Color.Transparent
                             )
                         )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Home Address
+                        Text(
+                            text = "Home Address",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color(0xFF374151),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = address,
+                            onValueChange = { address = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Enter your physical address", color = Color(0xFF9CA3AF)) },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF9CA3AF)) },
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF111827),
+                                unfocusedTextColor = Color(0xFF111827),
+                                focusedContainerColor = Color(0xFFF3F4F6),
+                                unfocusedContainerColor = Color(0xFFF3F4F6),
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = BrandBlue,
+                                cursorColor = BrandBlue
+                            )
+                        )
                     }
                 }
 
@@ -259,7 +289,7 @@ fun EditProfileScreen(
                         
                         viewModel.updateCustomerProfile(
                             name = name.trim(),
-                            address = userProfile?.address ?: "",
+                            address = address.trim(),
                             email = email.trim(),
                             password = userProfile?.password ?: "",
                             context = context,

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.homeserve.ui.theme.BrandBlue
 import com.example.homeserve.ui.viewmodel.CustomerViewModel
+import androidx.compose.ui.draw.clip
 
 @Composable
 fun ProfileScreen(
@@ -97,7 +98,17 @@ fun ProfileScreen(
                         color = Color(0xFFEFF6FF)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(text = "👤", fontSize = 36.sp)
+                            val photoUrl = userProfile?.profilePhotoUrl
+                            if (!photoUrl.isNullOrBlank()) {
+                                coil.compose.AsyncImage(
+                                    model = photoUrl,
+                                    contentDescription = "Profile Photo",
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Text(text = "👤", fontSize = 36.sp)
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))

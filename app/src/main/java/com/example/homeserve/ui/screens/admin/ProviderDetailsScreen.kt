@@ -199,7 +199,7 @@ fun ProviderDetailsScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 val photoUrl = provider.profilePhotoUrl
-                                if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) {
+                                if (photoUrl.isNotBlank()) {
                                     coil.compose.AsyncImage(
                                         model = photoUrl,
                                         contentDescription = "Profile Photo",

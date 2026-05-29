@@ -95,52 +95,38 @@ fun AppNavGraph(
     ) {
         // --- Selection Screen ---
         composable(Screen.Selection.route) {
-            // Commented out the 2-second auto-redirect state-management to allow clean manual role choice during presentations
-            /*
-            LaunchedEffect(Unit) {
-                if (!hasAutoRedirected) {
-                    val currentRole = sharedPrefs.getString("saved_role", null)
-                    val currentPhone = sharedPrefs.getString("saved_phone", null)
-                    if (currentRole != null && currentPhone != null) {
-                        kotlinx.coroutines.delay(2000)
-                        // Re-read preferences in case user clicked logout during the 2-second delay
-                        val activeRole = sharedPrefs.getString("saved_role", null)
-                        val activePhone = sharedPrefs.getString("saved_phone", null)
-                        if (activeRole != null && activePhone != null) {
-                            hasAutoRedirected = true
-                            when (activeRole) {
-                                "customer" -> {
-                                    navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Selection.route) { inclusive = true }
-                                    }
-                                }
-                                "provider" -> {
-                                    navController.navigate(Screen.ProviderHome.route) {
-                                        popUpTo(Screen.Selection.route) { inclusive = true }
-                                    }
-                                }
-                                "admin" -> {
-                                    navController.navigate(Screen.AdminDashboard.route) {
-                                        popUpTo(Screen.Selection.route) { inclusive = true }
-                                    }
-                                }
-                            }
-                        } else {
-                            hasAutoRedirected = true
-                        }
-                    } else {
-                        hasAutoRedirected = true
-                    }
-                }
-            }
-            */
-
             AppSelectionScreen(
                 onRoleSelected = { role ->
+                    val savedRole = sharedPrefs.getString("saved_role", null)
+                    val savedPhone = sharedPrefs.getString("saved_phone", null)
                     when (role) {
-                        UserRole.CUSTOMER -> navController.navigate(Screen.CustomerLogin.route)
-                        UserRole.PROVIDER -> navController.navigate(Screen.ProviderLogin.route)
-                        UserRole.ADMIN -> navController.navigate(Screen.AdminLogin.route)
+                        UserRole.CUSTOMER -> {
+                            if (savedRole == "customer" && savedPhone != null) {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Selection.route) { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate(Screen.CustomerLogin.route)
+                            }
+                        }
+                        UserRole.PROVIDER -> {
+                            if (savedRole == "provider" && savedPhone != null) {
+                                navController.navigate(Screen.ProviderHome.route) {
+                                    popUpTo(Screen.Selection.route) { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate(Screen.ProviderLogin.route)
+                            }
+                        }
+                        UserRole.ADMIN -> {
+                            if (savedRole == "admin" && savedPhone != null) {
+                                navController.navigate(Screen.AdminDashboard.route) {
+                                    popUpTo(Screen.Selection.route) { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate(Screen.AdminLogin.route)
+                            }
+                        }
                     }
                 }
             )

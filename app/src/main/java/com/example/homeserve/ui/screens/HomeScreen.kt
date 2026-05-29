@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.homeserve.ui.data.CustomerMockData
 import com.example.homeserve.ui.theme.BrandBlue
+import androidx.compose.ui.draw.clip
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.homeserve.ui.viewmodel.CustomerViewModel
@@ -88,7 +89,17 @@ fun HomeScreen(
                             color = Color.White.copy(alpha = 0.2f)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text("👤", fontSize = 20.sp)
+                                val photoUrl = userProfile?.profilePhotoUrl
+                                if (!photoUrl.isNullOrBlank()) {
+                                    coil.compose.AsyncImage(
+                                        model = photoUrl,
+                                        contentDescription = "Profile Photo",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                } else {
+                                    Text("👤", fontSize = 20.sp)
+                                }
                             }
                         }
                     }
