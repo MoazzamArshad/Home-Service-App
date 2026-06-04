@@ -1,0 +1,94 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if user is admin
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Helper: check if a booking is within provider's registered boundaries
+    function isWithinProviderBoundaries(bookingData, providerId) {
+      let provider = get(/databases/$(database)/documents/providers/$(providerId)).data;
+      let limit = provider.radiusKm * 0.009;
+      let latDiff = bookingData.customerLatitude - provider.providerLatitude;
+      let lngDiff = bookingData.customerLongitude - provider.providerLongitude;
+      return latDiff >= -limit && latDiff <= limit &&
+             lngDiff >= -limit && lngDiff <= limit;
+    }
+
+    // 1. Users collection rules
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+
+      match /addresses/{addressId} {
+        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      }
+    }
+
+    // 2. Providers collection rules
+    match /providers/{providerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == providerId || isAdmin());
+    }
+
+    // 3. Categories collection rules
+    match /categories/{categoryId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // 4. Services collection rules
+    match /services/{serviceId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // 5. Bookings collection rules
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid ||
+        (resource.data.status == 'pending' && isWithinProviderBoundaries(resource.data, request.auth.uid)) ||
+        isAdmin()
+      );
+
+      allow write: if request.auth != null && (
+        (request.method == 'create' && request.resource.data.userId == request.auth.uid) ||
+        (resource.data.userId == request.auth.uid) ||
+        (resource.data.providerId == request.auth.uid) ||
+        (resource.data.status == 'pending' && isWithinProviderBoundaries(resource.data, request.auth.uid)) ||
+        isAdmin()
+      );
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null && (
+          get(/databases/$(database)/documents/bookings/{bookingId}).data.userId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/{bookingId}).data.providerId == request.auth.uid ||
+          isAdmin()
+        );
+      }
+    }
+
+    // 6. Notifications collection rules
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && (resource.data.recipientId == request.auth.uid || isAdmin());
+      allow write: if request.auth != null && (
+        (resource != null && resource.data.recipientId == request.auth.uid) ||
+        (request.method == 'create') ||
+        isAdmin()
+      );
+    }
+
+    // 7. Admin collection rules
+    match /admins/{adminId} {
+      allow read, write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Default rule for unmatched documents
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
