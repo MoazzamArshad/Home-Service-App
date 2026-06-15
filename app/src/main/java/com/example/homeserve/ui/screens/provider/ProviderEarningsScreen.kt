@@ -53,7 +53,7 @@ fun ProviderEarningsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                  Text(
-                    text = "$${completedJobs.sumOf { it.totalAmount }}",
+                    text = "Rs. ${completedJobs.sumOf { it.totalAmount }}",
                     style = MaterialTheme.typography.displayMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 42.sp
@@ -159,7 +159,7 @@ fun EarningCard(record: com.example.homeserve.data.model.Booking) {
                     )
                 }
                 Text(
-                    text = "$${record.totalAmount}", 
+                    text = "Rs. ${record.totalAmount}", 
                     color = Color(0xFF059669), 
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp

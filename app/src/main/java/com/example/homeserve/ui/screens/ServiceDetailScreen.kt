@@ -26,8 +26,16 @@ import com.example.homeserve.ui.data.CustomerMockData
 import com.example.homeserve.ui.theme.BrandBlue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.horizontalScroll
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.homeserve.ui.viewmodel.CustomerViewModel
@@ -42,7 +50,25 @@ fun ServiceDetailScreen(
 ) {
     val context = LocalContext.current
     val allBookings by viewModel.userBookings.collectAsState()
-    val hasPendingBooking = allBookings.any { it.status == "pending" }
+    val activeBookings = remember(allBookings) {
+        allBookings.filter { it.status.lowercase() in listOf("pending", "accepted", "in_progress") }
+    }
+    val serviceReviews by viewModel.serviceReviews.collectAsState()
+    var showReviewsDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(serviceId) {
+        viewModel.fetchReviewsForService(serviceId)
+    }
+
+    val avgRating = remember(serviceReviews) {
+        if (serviceReviews.isNotEmpty()) {
+            serviceReviews.sumOf { it.rating }.toDouble() / serviceReviews.size
+        } else {
+            4.8
+        }
+    }
+    val reviewCount = remember(serviceReviews) { serviceReviews.size }
+
     // Attempt to find the service in already loaded lists (categoryServices or popularServices)
     val categoryServices by viewModel.categoryServices.collectAsState()
     val popularServices by viewModel.popularServices.collectAsState()
@@ -104,7 +130,7 @@ fun ServiceDetailScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(16.dp))
                             Text(
-                                text = " 4.5 (500 reviews)", // Hardcoded rating for now
+                                text = " ${String.format(java.util.Locale.US, "%.1f", avgRating)} ($reviewCount review${if (reviewCount == 1) "" else "s"})",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.9f)
                             )
@@ -120,43 +146,7 @@ fun ServiceDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp)
         ) {
-            // Price Card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Starting Price", style = MaterialTheme.typography.labelMedium, color = Color(0xFF6B7280))
-                        Text(
-                            "$${service.price}", 
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = BrandBlue
-                            )
-                        )
-                    }
-                    Surface(
-                        color = Color(0xFFECFDF5),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "Upfront Price",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = Color(0xFF059669),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            // Price card removed
 
             // Description
             Text("Description", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
@@ -190,7 +180,7 @@ fun ServiceDetailScreen(
 
             // Reviews Card
             Surface(
-                onClick = { /* View Reviews */ },
+                onClick = { showReviewsDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White
@@ -211,7 +201,11 @@ fun ServiceDetailScreen(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Ratings & Reviews", fontWeight = FontWeight.Bold, color = Color(0xFF111827))
-                        Text("Check feedback from 500+ users", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                        Text(
+                            text = if (reviewCount > 0) "Check feedback from $reviewCount user${if (reviewCount == 1) "" else "s"}" else "No reviews yet. Be the first to rate!",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF6B7280)
+                        )
                     }
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFD1D5DB))
                 }
@@ -230,8 +224,8 @@ fun ServiceDetailScreen(
                 PrimaryButton(
                     text = "Book This Service",
                     onClick = {
-                        if (hasPendingBooking) {
-                            Toast.makeText(context, "You already have a pending booking request. Please wait for it to be accepted or cancel it before booking a new service.", Toast.LENGTH_LONG).show()
+                        if (activeBookings.size >= 3) {
+                            Toast.makeText(context, "You can book up to 3 services at a time. Please complete or cancel your active bookings first.", Toast.LENGTH_LONG).show()
                         } else {
                             onBookNowClick(service.serviceId)
                         }
@@ -239,6 +233,113 @@ fun ServiceDetailScreen(
                 )
             }
         }
+    }
+
+    if (showReviewsDialog) {
+        AlertDialog(
+            onDismissRequest = { showReviewsDialog = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Reviews & Ratings", fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    TextButton(onClick = { showReviewsDialog = false }) {
+                        Text("Close", color = BrandBlue, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                ) {
+                    if (serviceReviews.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No reviews yet. Book this service and be the first to leave a review!", color = Color(0xFF6B7280), textAlign = TextAlign.Center)
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(serviceReviews) { reviewItem ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = reviewItem.customerName.ifBlank { "Anonymous Customer" },
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = Color(0xFF111827)
+                                            )
+                                            Row {
+                                                (1..5).forEach { starIndex ->
+                                                    Icon(
+                                                        imageVector = Icons.Default.Star,
+                                                        contentDescription = null,
+                                                        tint = if (starIndex <= reviewItem.rating) Color(0xFFF59E0B) else Color(0xFFD1D5DB),
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (reviewItem.reviewTags.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            androidx.compose.foundation.layout.Row(
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                                            ) {
+                                                reviewItem.reviewTags.forEach { tag ->
+                                                    Surface(
+                                                        color = BrandBlue.copy(alpha = 0.1f),
+                                                        shape = RoundedCornerShape(6.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = tag,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = BrandBlue
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (reviewItem.reviewText.isNotBlank()) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = reviewItem.reviewText,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF4B5563)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
     }
 }
 

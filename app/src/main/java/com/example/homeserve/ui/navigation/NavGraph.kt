@@ -140,47 +140,15 @@ fun AppNavGraph(
 
         // --- Provider Flow ---
         composable(Screen.ProviderLogin.route) {
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val activity = context as? android.app.Activity
-            var isLoading by remember { mutableStateOf(false) }
-
             ProviderLoginScreen(
-                onContinueClick = { phone ->
-                    if (activity != null) {
-                        isLoading = true
-                        providerViewModel.sendOtp(
-                            phone = phone,
-                            activity = activity,
-                            onCodeSent = {
-                                isLoading = false
-                                navController.navigate(Screen.ProviderOtp.createRoute(phone))
-                            },
-                            onError = { err ->
-                                isLoading = false
-                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
-                            }
-                        )
-                    } else {
-                        android.widget.Toast.makeText(context, "Could not initialize activity", android.widget.Toast.LENGTH_SHORT).show()
-                    }
+                viewModel = providerViewModel,
+                onNavigateToOtp = { phone ->
+                    navController.navigate(Screen.ProviderOtp.createRoute(phone))
                 },
                 onEmailLoginClick = {
                     navController.navigate(Screen.ProviderEmailLogin.route)
                 }
             )
-
-            if (isLoading) {
-                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .background(Color.White, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = BrandBlue)
-                    }
-                }
-            }
         }
 
         // --- Provider Email Login ---
@@ -326,11 +294,26 @@ fun AppNavGraph(
         }
 
         composable(Screen.ProviderCategorySelection.route) {
+            val context = androidx.compose.ui.platform.LocalContext.current
             ProviderCategorySelectionScreen(
                 viewModel = providerViewModel,
                 onContinueClick = { categories ->
-                    val categoriesString = categories.joinToString(",")
-                    navController.navigate(Screen.ProviderServiceSelection.createRoute(categoriesString))
+                    providerViewModel.saveProviderProfileWithCategoriesAndServices(
+                        context = context,
+                        selectedCategories = categories,
+                        selectedServices = emptyList(),
+                        onComplete = {
+                            if (providerViewModel.providerProfile.value?.categoryId?.isNotEmpty() == true) {
+                                navController.navigate(Screen.ProviderHome.route) {
+                                    popUpTo(Screen.ProviderHome.route) { inclusive = false }
+                                }
+                            } else {
+                                navController.navigate(Screen.ProviderHome.route) {
+                                    popUpTo(Screen.Selection.route) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
                 }
             )
         }
@@ -777,47 +760,15 @@ fun AppNavGraph(
 
         // --- Customer Flow ---
         composable(Screen.CustomerLogin.route) {
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val activity = context as? android.app.Activity
-            var isLoading by remember { mutableStateOf(false) }
-
             LoginScreen(
-                onContinueClick = { phone ->
-                    if (activity != null) {
-                        isLoading = true
-                        customerViewModel.sendOtp(
-                            phone = phone,
-                            activity = activity,
-                            onCodeSent = {
-                                isLoading = false
-                                navController.navigate(Screen.CustomerOtp.createRoute(phone))
-                            },
-                            onError = { err ->
-                                isLoading = false
-                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
-                            }
-                        )
-                    } else {
-                        android.widget.Toast.makeText(context, "Could not initialize activity", android.widget.Toast.LENGTH_SHORT).show()
-                    }
+                viewModel = customerViewModel,
+                onNavigateToOtp = { phone ->
+                    navController.navigate(Screen.CustomerOtp.createRoute(phone))
                 },
                 onEmailLoginClick = {
                     navController.navigate(Screen.CustomerEmailLogin.route)
                 }
             )
-
-            if (isLoading) {
-                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .background(Color.White, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = BrandBlue)
-                    }
-                }
-            }
         }
 
         // --- Customer Email Login ---

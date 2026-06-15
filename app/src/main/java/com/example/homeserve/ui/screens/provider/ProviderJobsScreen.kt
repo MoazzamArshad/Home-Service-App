@@ -33,6 +33,8 @@ import coil.compose.AsyncImage
 import com.example.homeserve.ui.theme.BrandBlue
 import com.example.homeserve.ui.viewmodel.ProviderViewModel
 import com.example.homeserve.data.NetworkUtils
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun ProviderJobsScreen(
@@ -50,12 +52,15 @@ fun ProviderJobsScreen(
         viewModel.loadProviderData()
     }
 
-    var activeTab by remember { mutableStateOf("current") }
-    val tabs = listOf("current", "pending", "accepted", "completed", "cancelled")
+    var activeTab by remember { mutableStateOf("pending") }
+    val tabs = listOf("pending", "accepted", "completed", "cancelled")
     val selectedIndex = tabs.indexOf(activeTab)
 
     var selectedJobDetails by remember { mutableStateOf<com.example.homeserve.data.model.Booking?>(null) }
     var zoomedPhotoUrlMain by remember { mutableStateOf<String?>(null) }
+    var showPriceUpdateDialogForJob by remember { mutableStateOf<com.example.homeserve.data.model.Booking?>(null) }
+    var listPriceInput by remember { mutableStateOf("") }
+    var listPriceError by remember { mutableStateOf<String?>(null) }
 
     var currentReviewingJob by remember { mutableStateOf<com.example.homeserve.data.model.Booking?>(null) }
 
@@ -123,10 +128,7 @@ fun ProviderJobsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = when (activeTab) {
-                        "current" -> if (liveCurrentJob != null) "Reviewing: ${liveCurrentJob.serviceName}" else "No active selection"
-                        else -> "You have ${filteredJobs.size} jobs listed"
-                    },
+                    text = "You have ${filteredJobs.size} jobs listed",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.9f)
                 )
@@ -187,40 +189,29 @@ fun ProviderJobsScreen(
             }
         }
 
-        if (activeTab == "current") {
-            if (liveCurrentJob != null) {
-                ProviderJobDetailsContent(
-                    job = liveCurrentJob,
-                    providerLatitude = profile?.providerLatitude ?: 0.0,
-                    providerLongitude = profile?.providerLongitude ?: 0.0,
-                    isAcceptEnabled = profile?.isAvailable ?: true,
-                    onAccept = { viewModel.acceptJob(liveCurrentJob.bookingId) },
-                    onDecline = { 
-                        viewModel.declineJob(liveCurrentJob.bookingId)
-                        currentReviewingJob = null
-                    },
-                    onCancel = { 
-                        viewModel.cancelJob(liveCurrentJob.bookingId)
-                        currentReviewingJob = null
-                    },
-                    onChatClick = { onChatClick(liveCurrentJob.bookingId) },
-                    onMarkPaymentReceived = { viewModel.markPaymentReceived(liveCurrentJob.bookingId) },
-                    onPhotoClick = { zoomedPhotoUrlMain = it },
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(24.dp),
-                    contentAlignment = Alignment.Center
+        if (activeJobs.size >= 2) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Surface(
+                color = Color(0xFFFEF3C7), // light amber
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("No active job selected", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF4B5563))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Select a request from the Pending or Accepted tabs to view details.", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF9CA3AF), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    }
+                    Text("ℹ️", modifier = Modifier.padding(end = 8.dp))
+                    Text(
+                        text = "You have 2 ongoing active jobs. Please complete or cancel one before accepting another.",
+                        color = Color(0xFF92400E), // dark amber
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
-        } else {
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
             if (filteredJobs.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -241,13 +232,12 @@ fun ProviderJobsScreen(
                                 currentProviderId = profile?.uid ?: "",
                                 providerLatitude = profile?.providerLatitude ?: 0.0,
                                 providerLongitude = profile?.providerLongitude ?: 0.0,
-                                onAccept = { viewModel.acceptJob(job.bookingId) },
+                                onAccept = { price -> viewModel.acceptJob(job.bookingId, price) },
                                 onDecline = { viewModel.declineJob(job.bookingId) },
-                                isAcceptEnabled = profile?.isAvailable ?: true,
+                                isAcceptEnabled = (profile?.isAvailable ?: true) && activeJobs.size < 2,
                                 onPhotoClick = { zoomedPhotoUrlMain = it },
                                 onClick = { 
-                                    currentReviewingJob = job
-                                    activeTab = "current"
+                                    selectedJobDetails = job
                                 }
                             )
                         } else {
@@ -259,13 +249,13 @@ fun ProviderJobsScreen(
                                 onChatClick = { onChatClick(job.bookingId) },
                                 onPhotoClick = { zoomedPhotoUrlMain = it },
                                 onMarkPaymentReceived = { viewModel.markPaymentReceived(job.bookingId) },
+                                onUpdatePriceClick = {
+                                    listPriceInput = job.totalAmount.toString()
+                                    listPriceError = null
+                                    showPriceUpdateDialogForJob = job
+                                },
                                 onClick = { 
-                                    if (job.status == "accepted" || job.status == "in_progress") {
-                                        currentReviewingJob = job
-                                        activeTab = "current"
-                                    } else {
-                                        selectedJobDetails = job
-                                    }
+                                    selectedJobDetails = job
                                 }
                             )
                         }
@@ -282,12 +272,18 @@ fun ProviderJobsScreen(
             job = liveJob,
             providerLatitude = profile?.providerLatitude ?: 0.0,
             providerLongitude = profile?.providerLongitude ?: 0.0,
-            isAcceptEnabled = profile?.isAvailable ?: true,
-            onAccept = { viewModel.acceptJob(liveJob.bookingId) },
+            isAcceptEnabled = (profile?.isAvailable ?: true) && activeJobs.size < 2,
+            onAccept = { price ->
+                viewModel.acceptJob(liveJob.bookingId, price)
+                selectedJobDetails = null
+            },
             onDecline = { viewModel.declineJob(liveJob.bookingId) },
             onCancel = { viewModel.cancelJob(liveJob.bookingId) },
             onChatClick = { onChatClick(liveJob.bookingId) },
             onMarkPaymentReceived = { viewModel.markPaymentReceived(liveJob.bookingId) },
+            onUpdatePrice = { price ->
+                viewModel.updateBookingPrice(liveJob.bookingId, price)
+            },
             onClose = { selectedJobDetails = null }
         )
     }
@@ -329,6 +325,76 @@ fun ProviderJobsScreen(
             confirmButton = {}
         )
     }
+
+    if (showPriceUpdateDialogForJob != null) {
+        val jobToUpdate = showPriceUpdateDialogForJob!!
+        AlertDialog(
+            onDismissRequest = { showPriceUpdateDialogForJob = null },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("Update Price Quote", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter the new negotiated price (in PKR) for this service.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4B5563)
+                    )
+                    OutlinedTextField(
+                        value = listPriceInput,
+                        onValueChange = { input ->
+                            if (input.length <= 6) {
+                                listPriceInput = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("New Price (Rs.)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF111827),
+                            unfocusedTextColor = Color(0xFF111827),
+                            focusedContainerColor = Color(0xFFF3F4F6),
+                            unfocusedContainerColor = Color(0xFFF3F4F6),
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = BrandBlue,
+                            cursorColor = BrandBlue
+                        )
+                    )
+                    if (listPriceError != null) {
+                        Text(
+                            text = listPriceError ?: "",
+                            color = Color.Red,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val priceInt = listPriceInput.trim().toIntOrNull()
+                        if (priceInt == null || priceInt <= 0) {
+                            listPriceError = "Please enter a valid price."
+                        } else {
+                            viewModel.updateBookingPrice(jobToUpdate.bookingId, priceInt)
+                            showPriceUpdateDialogForJob = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Update Price", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPriceUpdateDialogForJob = null }) {
+                    Text("Cancel", color = Color(0xFF4B5563))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -337,30 +403,65 @@ fun JobRequestCard(
     currentProviderId: String,
     providerLatitude: Double = 0.0,
     providerLongitude: Double = 0.0,
-    onAccept: () -> Unit,
+    onAccept: (Int) -> Unit,
     onDecline: () -> Unit,
     isAcceptEnabled: Boolean = true,
     onPhotoClick: (String) -> Unit,
     onClick: () -> Unit
 ) {
     var showAcceptConfirmDialog by remember { mutableStateOf(false) }
+    var quotePrice by remember { mutableStateOf("") }
+    var quoteError by remember { mutableStateOf<String?>(null) }
 
     if (showAcceptConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showAcceptConfirmDialog = false },
             containerColor = Color.White,
-            title = { Text("Accept Job Request", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
+            title = { Text("Accept Job & Write Price Quote", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
             text = {
-                Text(
-                    text = "Are you sure you want to accept this booking request for $${job.totalAmount}? You will be assigned as the service provider immediately.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF4B5563)
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter your initial price quote (in PKR) for this service based on the work. You can update this price later during chat.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4B5563)
+                    )
+                    OutlinedTextField(
+                        value = quotePrice,
+                        onValueChange = { input ->
+                            if (input.length <= 6) {
+                                quotePrice = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("Price Quote (Rs.)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrandBlue,
+                            cursorColor = BrandBlue
+                        )
+                    )
+                    if (quoteError != null) {
+                        Text(
+                            text = quoteError ?: "",
+                            color = Color(0xFFDC2626),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onAccept()
+                        val priceInt = quotePrice.trim().toIntOrNull()
+                        if (priceInt == null || priceInt <= 0) {
+                            quoteError = "Please enter a valid price quote."
+                            return@Button
+                        }
+                        onAccept(priceInt)
                         showAcceptConfirmDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
@@ -418,7 +519,7 @@ fun JobRequestCard(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "$${job.totalAmount}",
+                        text = "Rs. ${job.totalAmount}",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         color = Color(0xFF2563EB),
                         fontWeight = FontWeight.Bold,
@@ -561,6 +662,7 @@ fun AcceptedJobCard(
     onChatClick: () -> Unit,
     onPhotoClick: (String) -> Unit,
     onMarkPaymentReceived: () -> Unit = {},
+    onUpdatePriceClick: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -710,6 +812,20 @@ fun AcceptedJobCard(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                // Price Update Button inside card
+                Button(
+                    onClick = onUpdatePriceClick,
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFF6FF), contentColor = Color(0xFF2563EB))
+                ) {
+                    Text("💵", fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Change Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (job.customerPhone.isNotBlank()) {
                         Row(
@@ -843,11 +959,12 @@ fun ProviderJobDetailsOverlay(
     providerLatitude: Double = 0.0,
     providerLongitude: Double = 0.0,
     isAcceptEnabled: Boolean = true,
-    onAccept: () -> Unit,
+    onAccept: (Int) -> Unit,
     onDecline: () -> Unit,
     onCancel: () -> Unit,
     onChatClick: () -> Unit,
     onMarkPaymentReceived: () -> Unit = {},
+    onUpdatePrice: (Int) -> Unit,
     onClose: () -> Unit
 ) {
     var zoomedPhotoUrl by remember { mutableStateOf<String?>(null) }
@@ -892,8 +1009,8 @@ fun ProviderJobDetailsOverlay(
                     providerLatitude = providerLatitude,
                     providerLongitude = providerLongitude,
                     isAcceptEnabled = isAcceptEnabled,
-                    onAccept = {
-                        onAccept()
+                    onAccept = { price ->
+                        onAccept(price)
                         onClose()
                     },
                     onDecline = {
@@ -909,6 +1026,7 @@ fun ProviderJobDetailsOverlay(
                         onClose()
                     },
                     onMarkPaymentReceived = onMarkPaymentReceived,
+                    onUpdatePrice = onUpdatePrice,
                     onPhotoClick = { zoomedPhotoUrl = it },
                     modifier = Modifier.weight(1f)
                 )
@@ -961,33 +1079,73 @@ fun ProviderJobDetailsContent(
     providerLatitude: Double = 0.0,
     providerLongitude: Double = 0.0,
     isAcceptEnabled: Boolean = true,
-    onAccept: () -> Unit,
+    onAccept: (Int) -> Unit,
     onDecline: () -> Unit,
     onCancel: () -> Unit,
     onChatClick: () -> Unit,
     onMarkPaymentReceived: () -> Unit = {},
+    onUpdatePrice: (Int) -> Unit,
     onPhotoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var showAcceptConfirmDialog by remember { mutableStateOf(false) }
+    var quotePrice by remember { mutableStateOf("") }
+    var quoteError by remember { mutableStateOf<String?>(null) }
+
+    var showUpdatePriceDialog by remember { mutableStateOf(false) }
+    var newPriceInput by remember { mutableStateOf("") }
+    var updatePriceError by remember { mutableStateOf<String?>(null) }
 
     if (showAcceptConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showAcceptConfirmDialog = false },
             containerColor = Color.White,
-            title = { Text("Accept Job Request", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
+            title = { Text("Accept Job & Write Price Quote", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
             text = {
-                Text(
-                    text = "Are you sure you want to accept this booking request for $${job.totalAmount}? You will be assigned as the service provider immediately.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF4B5563)
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter your initial price quote (in PKR) for this service based on the work. You can update this price later during chat.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4B5563)
+                    )
+                    OutlinedTextField(
+                        value = quotePrice,
+                        onValueChange = { input ->
+                            if (input.length <= 6) {
+                                quotePrice = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("Price Quote (Rs.)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrandBlue,
+                            cursorColor = BrandBlue
+                        )
+                    )
+                    if (quoteError != null) {
+                        Text(
+                            text = quoteError ?: "",
+                            color = Color(0xFFDC2626),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onAccept()
+                        val priceInt = quotePrice.trim().toIntOrNull()
+                        if (priceInt == null || priceInt <= 0) {
+                            quoteError = "Please enter a valid price quote."
+                            return@Button
+                        }
+                        onAccept(priceInt)
                         showAcceptConfirmDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
@@ -997,6 +1155,70 @@ fun ProviderJobDetailsContent(
             },
             dismissButton = {
                 TextButton(onClick = { showAcceptConfirmDialog = false }) {
+                    Text("Cancel", color = Color(0xFF6B7280), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showUpdatePriceDialog) {
+        AlertDialog(
+            onDismissRequest = { showUpdatePriceDialog = false },
+            containerColor = Color.White,
+            title = { Text("Update Price Quote", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter the new negotiated price (in PKR) for this service.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4B5563)
+                    )
+                    OutlinedTextField(
+                        value = newPriceInput,
+                        onValueChange = { input ->
+                            if (input.length <= 6) {
+                                newPriceInput = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("New Price (Rs.)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrandBlue,
+                            cursorColor = BrandBlue
+                        )
+                    )
+                    if (updatePriceError != null) {
+                        Text(
+                            text = updatePriceError ?: "",
+                            color = Color(0xFFDC2626),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val priceInt = newPriceInput.trim().toIntOrNull()
+                        if (priceInt == null || priceInt <= 0) {
+                            updatePriceError = "Please enter a valid price."
+                            return@Button
+                        }
+                        onUpdatePrice(priceInt)
+                        showUpdatePriceDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                ) {
+                    Text("Update Price", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpdatePriceDialog = false }) {
                     Text("Cancel", color = Color(0xFF6B7280), fontWeight = FontWeight.Bold)
                 }
             }
@@ -1036,7 +1258,7 @@ fun ProviderJobDetailsContent(
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                text = "$${job.totalAmount}",
+                                text = "Rs. ${job.totalAmount}",
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 color = BrandBlue,
                                 fontWeight = FontWeight.Bold,
@@ -1232,6 +1454,19 @@ fun ProviderJobDetailsContent(
                         Text("Navigate to Customer", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            newPriceInput = job.totalAmount.toString()
+                            updatePriceError = null
+                            showUpdatePriceDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFF6FF), contentColor = Color(0xFF2563EB))
+                    ) {
+                        Text("💵 Update Negotiated Price", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                     if (job.customerPhone.isNotBlank()) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
@@ -1312,7 +1547,7 @@ fun ProviderJobDetailsContent(
                                 color = Color(0xFF16A34A)
                             )
                             Text(
-                                text = "$${job.totalAmount} collected",
+                                text = "Rs. ${job.totalAmount} collected",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF4B5563)
                             )

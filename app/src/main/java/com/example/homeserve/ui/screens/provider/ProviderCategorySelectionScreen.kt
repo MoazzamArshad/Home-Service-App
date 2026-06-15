@@ -54,6 +54,8 @@ fun ProviderCategorySelectionScreen(
 ) {
     val context = LocalContext.current
     val profileState by viewModel.providerProfile.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    
     var selectedCategories by remember {
         mutableStateOf(
             profileState?.categoryId
@@ -63,6 +65,21 @@ fun ProviderCategorySelectionScreen(
                 ?.toSet()
                 ?: emptySet()
         )
+    }
+
+    if (isLoading) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(Color.White, shape = RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = BrandBlue
+                )
+            }
+        }
     }
 
     LaunchedEffect(profileState) {

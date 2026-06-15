@@ -98,7 +98,7 @@ fun BookingConfirmationScreen(
                         serviceName = service.name,
                         categoryId = service.categoryId,
                         providerId = "",
-                        totalAmount = service.price,
+                        totalAmount = 0,
                         address = addressString,
                         latitude = customerLat,
                         longitude = customerLon,
@@ -106,14 +106,14 @@ fun BookingConfirmationScreen(
                         problemPhotoUrl = uploadedPhotoUrl,
                         problemAudioUrl = uploadedAudioUrl,
                         customerPhoneInput = viewModel.bookingContactPhone.value,
-                        onResult = { success ->
+                        onResult = { success, error ->
                             if (success) {
                                 viewModel.clearBookingInputs()
                                 isConfirming = false
                                 bookingCreated = true
                                 errorMessage = null
                             } else {
-                                errorMessage = "Failed to confirm booking on the server. Please try again."
+                                errorMessage = error ?: "Failed to confirm booking on the server. Please try again."
                                 isConfirming = false
                             }
                         }
@@ -314,26 +314,7 @@ fun BookingConfirmationScreen(
                             SummaryRow(label = "Attachments", value = attachmentsText)
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFF3F4F6))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Total Amount",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = Color(0xFF374151)
-                            )
-                            Text(
-                                text = "$${service?.price ?: 0}",
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = BrandBlue
-                                )
-                            )
-                        }
+                        // Total amount row removed
                     }
                 }
 

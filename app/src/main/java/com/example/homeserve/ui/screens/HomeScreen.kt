@@ -307,12 +307,6 @@ fun HomeScreen(
                                                 maxLines = 1
                                             )
                                         }
-                                        Text(
-                                            text = "$${service.price}",
-                                            fontWeight = FontWeight.Bold,
-                                            color = BrandBlue,
-                                            fontSize = 14.sp
-                                        )
                                     }
                                 }
                             }
@@ -527,7 +521,7 @@ private fun PopularServiceCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
                     Text(text = " 4.5", style = MaterialTheme.typography.bodySmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold) // hardcoded rating for now as it's not in ServiceModel
-                    Text(text = "  •  From $${service.price}", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+
                 }
             }
             Icon(

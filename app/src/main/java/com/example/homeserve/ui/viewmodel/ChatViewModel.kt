@@ -127,6 +127,49 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun sendVoiceMessage(audioUrl: String, durationSec: Int) {
+        if (audioUrl.isEmpty() || currentBookingId.isEmpty()) return
+
+        val booking = _bookingInfo.value ?: return
+        val senderId = if (currentSenderRole == "customer") booking.userId else booking.providerId
+        val senderName = if (currentSenderRole == "customer") booking.customerName else booking.providerName
+
+        val newMessage = ChatMessage(
+            senderId = senderId,
+            senderName = senderName,
+            senderRole = currentSenderRole,
+            text = "[Voice Message]",
+            timestamp = Timestamp.now(),
+            voiceUrl = audioUrl,
+            voiceDuration = durationSec
+        )
+
+        viewModelScope.launch {
+            repository.sendChatMessage(currentBookingId, newMessage)
+        }
+    }
+
+    fun sendImageMessage(imageUrl: String) {
+        if (imageUrl.isEmpty() || currentBookingId.isEmpty()) return
+
+        val booking = _bookingInfo.value ?: return
+        val senderId = if (currentSenderRole == "customer") booking.userId else booking.providerId
+        val senderName = if (currentSenderRole == "customer") booking.customerName else booking.providerName
+
+        val newMessage = ChatMessage(
+            senderId = senderId,
+            senderName = senderName,
+            senderRole = currentSenderRole,
+            text = "[Image Message]",
+            timestamp = Timestamp.now(),
+            imageUrl = imageUrl
+        )
+
+        viewModelScope.launch {
+            repository.sendChatMessage(currentBookingId, newMessage)
+        }
+    }
+
     private var lastTypingState = false
 
     fun setTyping(isTyping: Boolean) {
@@ -157,6 +200,31 @@ class ChatViewModel : ViewModel() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    fun updateBookingPrice(price: Int, onComplete: (Boolean) -> Unit = {}) {
+        val bookingId = currentBookingId
+        if (bookingId.isEmpty() || price < 0) {
+            onComplete(false)
+            return
+        }
+        viewModelScope.launch {
+            val success = repository.updateBookingPrice(bookingId, price)
+            if (success) {
+                val booking = _bookingInfo.value
+                val senderId = booking?.providerId ?: ""
+                val senderName = booking?.providerName ?: "Provider"
+                val systemMsg = ChatMessage(
+                    senderId = senderId,
+                    senderName = senderName,
+                    senderRole = "provider",
+                    text = "System: The service price was updated to Rs. $price.",
+                    timestamp = Timestamp.now()
+                )
+                repository.sendChatMessage(bookingId, systemMsg)
+            }
+            onComplete(success)
         }
     }
 

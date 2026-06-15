@@ -27,8 +27,8 @@ fun ProviderOtpScreen(
     onVerifyClick: (String) -> Unit,
     onResendClick: () -> Unit
 ) {
-    // Pre-filled with Firebase test OTP for CodeCanyon reviewers – change to "" for production
-    var otpCode by remember { mutableStateOf("123456") }
+    // Empty by default for production real-time OTP validation
+    var otpCode by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
     // Auto-focus the field when the screen opens

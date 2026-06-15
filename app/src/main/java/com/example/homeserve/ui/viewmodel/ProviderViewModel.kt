@@ -376,6 +376,109 @@ class ProviderViewModel : ViewModel() {
 
     // ─────────────────────────────────────────────────────────────────────────
 
+    fun signInWithPhoneAndPin(
+        phone: String,
+        pin: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        loggedInPhone = phone
+        currentProviderId = "provider_${phone.replace("[^0-9]".toRegex(), "")}"
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val profile = repository.getProviderProfile(currentProviderId)
+                if (profile == null) {
+                    _isLoading.value = false
+                    onComplete(false, "Account not found. Please register first.")
+                    return@launch
+                }
+                
+                if (profile.password != pin) {
+                    _isLoading.value = false
+                    onComplete(false, "Incorrect PIN code. Please try again.")
+                    return@launch
+                }
+                
+                _isProviderLoggedIn.value = true
+                _providerProfile.value = profile
+                loadProviderData()
+                startListeningToNotifications()
+                saveFcmTokenForCurrentProvider()
+                _isLoading.value = false
+                onComplete(true, null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _isLoading.value = false
+                onComplete(false, e.message ?: "Authentication failed.")
+            }
+        }
+    }
+
+    fun registerWithPhoneAndPin(
+        name: String,
+        phone: String,
+        pin: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        loggedInPhone = phone
+        currentProviderId = "provider_${phone.replace("[^0-9]".toRegex(), "")}"
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val profile = repository.getProviderProfile(currentProviderId)
+                if (profile != null) {
+                    _isLoading.value = false
+                    onComplete(false, "An account with this phone number already exists.")
+                    return@launch
+                }
+                
+                val newProvider = Provider(
+                    uid = currentProviderId,
+                    name = name,
+                    phone = phone,
+                    password = pin,
+                    role = "provider"
+                )
+                
+                val success = repository.saveProviderProfile(newProvider)
+                if (success) {
+                    _isProviderLoggedIn.value = true
+                    _providerProfile.value = newProvider
+                    loadProviderData()
+                    startListeningToNotifications()
+                    saveFcmTokenForCurrentProvider()
+                    _isLoading.value = false
+                    onComplete(true, null)
+                } else {
+                    _isLoading.value = false
+                    onComplete(false, "Failed to create account. Please try again.")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _isLoading.value = false
+                onComplete(false, e.message ?: "Registration failed.")
+            }
+        }
+    }
+
+    fun saveFcmTokenForCurrentProvider() {
+        if (currentProviderId.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val token = task.result
+                        viewModelScope.launch {
+                            repository.saveFcmToken(currentProviderId, token, "provider")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun setProviderId(phone: String, onCheckResult: (Boolean) -> Unit) {
         loggedInPhone = phone
         currentProviderId = "provider_${phone.replace("[^0-9]".toRegex(), "")}"
@@ -887,15 +990,48 @@ class ProviderViewModel : ViewModel() {
             val serviceIdsString = selectedServices.joinToString(",")
             
             val newProvider = if (currentProfile != null) {
+                val storageRepo = com.example.homeserve.data.StorageRepository()
+                
+                var finalPhotoUrl = if (tempProfilePhotoUrl.isNotBlank()) {
+                    if (tempProfilePhotoUrl.startsWith("http")) tempProfilePhotoUrl else {
+                        val uploadedPhoto = storageRepo.uploadFile(
+                            context, 
+                            android.net.Uri.parse(tempProfilePhotoUrl), 
+                            "provider_photos/$currentProviderId"
+                        )
+                        uploadedPhoto ?: currentProfile.profilePhotoUrl
+                    }
+                } else currentProfile.profilePhotoUrl
+
+                var finalDocUrl = if (tempDocumentUrl.isNotBlank()) {
+                    if (tempDocumentUrl.startsWith("http")) tempDocumentUrl else {
+                        val uploadedDoc = storageRepo.uploadFile(
+                            context, 
+                            android.net.Uri.parse(tempDocumentUrl), 
+                            "provider_documents/$currentProviderId"
+                        )
+                        uploadedDoc ?: currentProfile.documentUrl
+                    }
+                } else currentProfile.documentUrl
+
                 currentProfile.copy(
+                    name = if (tempFullName.isNotEmpty()) tempFullName else currentProfile.name,
+                    phone = if (tempPhone.isNotEmpty()) tempPhone else currentProfile.phone,
                     categoryId = categoryIdsString,
-                    selectedServiceIds = serviceIdsString
+                    selectedServiceIds = serviceIdsString,
+                    radiusKm = if (tempRadiusKm > 0) tempRadiusKm else currentProfile.radiusKm,
+                    providerLatitude = if (tempLatitude != 0.0) tempLatitude else currentProfile.providerLatitude,
+                    providerLongitude = if (tempLongitude != 0.0) tempLongitude else currentProfile.providerLongitude,
+                    address = if (tempAddress.isNotEmpty()) tempAddress else currentProfile.address,
+                    profilePhotoUrl = finalPhotoUrl,
+                    documentUrl = finalDocUrl,
+                    idNumber = if (tempIdNumber.isNotEmpty()) tempIdNumber else currentProfile.idNumber
                 )
             } else {
                 val storageRepo = com.example.homeserve.data.StorageRepository()
                 
                 // Upload profile photo if present
-                var finalPhotoUrl = tempProfilePhotoUrl.ifBlank { "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150" }
+                var finalPhotoUrl = tempProfilePhotoUrl
                 if (tempProfilePhotoUrl.isNotBlank()) {
                     val uploadedPhoto = storageRepo.uploadFile(
                         context, 
@@ -1076,7 +1212,19 @@ class ProviderViewModel : ViewModel() {
         }
     }
 
-    fun acceptJob(bookingId: String) {
+    fun acceptJob(bookingId: String, price: Int) {
+        if (_activeJobs.value.isNotEmpty()) {
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                val ctx = com.example.homeserve.HomeServeApp.getContext()
+                android.widget.Toast.makeText(
+                    ctx,
+                    "You can only accept one active job at a time. Please complete or cancel your ongoing job first.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            return
+        }
+
         locallyAcceptedBookingIds.add(bookingId)
         try {
             val ctx = com.example.homeserve.HomeServeApp.getContext()
@@ -1089,18 +1237,32 @@ class ProviderViewModel : ViewModel() {
         // Optimistically update lists to reflect status change immediately in the UI
         val job = _incomingRequests.value.find { it.bookingId == bookingId }
         if (job != null) {
-            val accepted = job.copy(status = "accepted", providerId = currentProviderId)
+            val accepted = job.copy(status = "accepted", providerId = currentProviderId, totalAmount = price)
             _incomingRequests.value = _incomingRequests.value.filter { it.bookingId != bookingId }
             _activeJobs.value = (listOf(accepted) + _activeJobs.value).distinctBy { it.bookingId }
         }
 
         viewModelScope.launch {
             _isLoading.value = true
-            val success = repository.updateBookingStatus(bookingId, "accepted", currentProviderId)
+            val success = repository.updateBookingStatus(bookingId, "accepted", currentProviderId, price = price)
             if (success) {
                 val profile = _providerProfile.value
                 if (profile != null) {
                     fetchBookings(profile)
+                }
+            } else {
+                // Revert optimistic updates
+                val profile = _providerProfile.value
+                if (profile != null) {
+                    fetchBookings(profile)
+                }
+                viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                    val ctx = com.example.homeserve.HomeServeApp.getContext()
+                    android.widget.Toast.makeText(
+                        ctx,
+                        "This job was already accepted by another provider or is no longer pending.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
                 }
             }
             _isLoading.value = false
@@ -1134,7 +1296,21 @@ class ProviderViewModel : ViewModel() {
 
         viewModelScope.launch {
             _isLoading.value = true
-            val success = repository.updateBookingStatus(bookingId, "cancelled")
+            val success = repository.updateBookingStatus(bookingId, "pending")
+            if (success) {
+                val profile = _providerProfile.value
+                if (profile != null) {
+                    fetchBookings(profile)
+                }
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun updateBookingPrice(bookingId: String, price: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val success = repository.updateBookingPrice(bookingId, price)
             if (success) {
                 val profile = _providerProfile.value
                 if (profile != null) {

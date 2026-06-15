@@ -401,7 +401,7 @@ fun ProviderHomeScreen(
                 StatCard(
                     modifier = Modifier.weight(1f), 
                     label = "Earnings", 
-                    value = "$${completedJobs.sumOf { it.totalAmount }}", 
+                    value = "Rs. ${completedJobs.sumOf { it.totalAmount }}", 
                     icon = "💵", 
                     iconBg = Color(0xFFECFDF5)
                 )
@@ -452,7 +452,7 @@ fun ProviderHomeScreen(
                         address = request.address,
                         date = "Today",
                         time = "Flexible",
-                        price = "$${request.totalAmount}",
+                        price = "Rs. ${request.totalAmount}",
                         isNew = true
                     )
                     Spacer(modifier = Modifier.height(12.dp))

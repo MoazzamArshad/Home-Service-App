@@ -31,8 +31,8 @@ fun AdminLoginScreen(
     onLoginSuccess: () -> Unit,
     onForgotPasswordClick: () -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("admin@homeserve.com") }
-    var password by remember { mutableStateOf("password") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showCryDialog by remember { mutableStateOf(false) }

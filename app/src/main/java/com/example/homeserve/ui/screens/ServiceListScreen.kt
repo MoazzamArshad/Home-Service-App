@@ -168,20 +168,7 @@ private fun ServiceItemCard(
                 }
             }
             
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "$${service.price}",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = BrandBlue
-                    )
-                )
-                Text(
-                    text = "Starting",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF9CA3AF)
-                )
-            }
+            // Price column removed
         }
     }
 }

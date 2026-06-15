@@ -29,8 +29,8 @@ fun OtpScreen(
     onResendClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Pre-filled with Firebase test OTP for CodeCanyon reviewers – change to "" for production
-    var otpCode by remember { mutableStateOf("123456") }
+    // Empty by default for production real-time OTP validation
+    var otpCode by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {

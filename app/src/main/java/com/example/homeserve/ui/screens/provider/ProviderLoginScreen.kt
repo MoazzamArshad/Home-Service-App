@@ -1,38 +1,58 @@
 package com.example.homeserve.ui.screens.provider
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.homeserve.ui.components.PrimaryButton
 import com.example.homeserve.ui.theme.BrandBlue
+import com.example.homeserve.ui.viewmodel.ProviderViewModel
 
 @Composable
 fun ProviderLoginScreen(
-    onContinueClick: (String) -> Unit,
-    onEmailLoginClick: () -> Unit
+    viewModel: ProviderViewModel,
+    onNavigateToOtp: (String) -> Unit,
+    onEmailLoginClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    // Pre-filled with Firebase test number for CodeCanyon reviewers – change to "" for production
-    var phoneNumber by remember { mutableStateOf("+16505551234") }
-    val isValid = phoneNumber.length >= 8
+    val context = LocalContext.current
+    var isRegisterMode by remember { mutableStateOf(false) }
+    var phoneNumber by remember { mutableStateOf("") }
+
+    val isLoading by viewModel.isLoading.collectAsState()
+    val scrollState = rememberScrollState()
+
+    val isFormValid = phoneNumber.length >= 10
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .verticalScroll(scrollState)
     ) {
         Box(
             modifier = Modifier
@@ -45,7 +65,7 @@ fun ProviderLoginScreen(
         ) {
             Column {
                 Text(
-                    text = "Service Provider Login",
+                    text = if (isRegisterMode) "Create Partner Account" else "Service Partner Login",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp
@@ -54,7 +74,7 @@ fun ProviderLoginScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Enter your phone number or sign in with email",
+                    text = if (isRegisterMode) "Fill details to start your home services business" else "Enter your phone number to login via OTP",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.9f)
                 )
@@ -67,7 +87,7 @@ fun ProviderLoginScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Surface(
                 modifier = Modifier.size(90.dp),
@@ -75,14 +95,14 @@ fun ProviderLoginScreen(
                 color = Color(0xFFF3F4F6)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(text = "👨\u200D🔧", fontSize = 44.sp)
+                    Text(text = "👨‍🔧", fontSize = 44.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Welcome Back!",
+                text = if (isRegisterMode) "Register as Service Provider" else "Welcome Back!",
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp
@@ -91,15 +111,16 @@ fun ProviderLoginScreen(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Login to manage your service requests",
+                text = if (isRegisterMode) "Grow your customer base and earn more" else "Login to manage your service requests",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF6B7280),
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // Phone Field
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Text(
                     text = "Phone Number",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -114,12 +135,12 @@ fun ProviderLoginScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("e.g. +15555555555", color = Color(0xFF9CA3AF)) },
+                    placeholder = { Text("e.g. +923001234567", color = Color(0xFF9CA3AF)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Phone,
                             contentDescription = null,
-                            tint = if (isValid) BrandBlue else Color(0xFF9CA3AF)
+                            tint = BrandBlue
                         )
                     },
                     shape = RoundedCornerShape(12.dp),
@@ -140,57 +161,43 @@ fun ProviderLoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             PrimaryButton(
-                text = "Continue with Phone",
-                onClick = { onContinueClick(phoneNumber) },
-                enabled = isValid,
+                text = if (isLoading) "Sending OTP..." else if (isRegisterMode) "Register & Send OTP" else "Send Verification Code",
+                onClick = {
+                    val activity = context as? android.app.Activity
+                    if (activity != null) {
+                        viewModel.sendOtp(
+                            phone = phoneNumber.trim(),
+                            activity = activity,
+                            onCodeSent = {
+                                onNavigateToOtp(phoneNumber.trim())
+                            },
+                            onError = { err ->
+                                Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } else {
+                        Toast.makeText(context, "Activity context is missing", Toast.LENGTH_LONG).show()
+                    }
+                },
+                enabled = isFormValid && !isLoading,
                 modifier = Modifier.height(50.dp)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE5E7EB))
-                Text(
-                    text = "OR",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = Color(0xFF9CA3AF),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE5E7EB))
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Email / Google Login Button
-            OutlinedButton(
-                onClick = onEmailLoginClick,
+            // Toggle Login / Register
+            Text(
+                text = if (isRegisterMode) "Already have an account? Sign In" else "New to HomeServe? Register as Partner",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = BrandBlue
+                ),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF374151)
-                )
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text("✉️", fontSize = 18.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Sign in with Email / Google",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
+                    .clickable { 
+                        isRegisterMode = !isRegisterMode
+                    }
+                    .padding(8.dp)
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -201,6 +208,8 @@ fun ProviderLoginScreen(
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

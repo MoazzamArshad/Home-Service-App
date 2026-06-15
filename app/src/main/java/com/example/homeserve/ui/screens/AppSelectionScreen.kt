@@ -94,15 +94,7 @@ fun AppSelectionScreen(
             iconBackgroundColor = Color(0xFFECFDF5),
             onClick = { onRoleSelected(UserRole.PROVIDER) }
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        RoleCard(
-            title = "Admin",
-            subtitle = "Manage the platform",
-            icon = Icons.Default.Shield,
-            iconColor = Color(0xFF7C3AED),
-            iconBackgroundColor = Color(0xFFF5F3FF),
-            onClick = { onRoleSelected(UserRole.ADMIN) }
-        )
+
 
         Spacer(modifier = Modifier.weight(1.2f))
 

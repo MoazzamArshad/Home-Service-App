@@ -113,7 +113,10 @@ data class ChatMessage(
     val senderName: String = "",
     val senderRole: String = "", // "customer" or "provider"
     val text: String = "",
-    val timestamp: Timestamp = Timestamp.now()
+    val timestamp: Timestamp = Timestamp.now(),
+    val voiceUrl: String = "",
+    val voiceDuration: Int = 0,
+    val imageUrl: String = ""
 )
 
 data class AppNotification(

@@ -452,6 +452,83 @@ private fun ComplaintsSupportSection() {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // --- Support Contact Card ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, BrandBlue.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = "Direct Support Contact",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandBlue
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Abdullah Zulfiqar",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF111827)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "+92 321 1227229",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF374151)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "If we do not pick up at the moment, please message us on WhatsApp.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF4B5563)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            try {
+                                val callIntent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                    data = android.net.Uri.parse("tel:+923211227229")
+                                }
+                                context.startActivity(callIntent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Call Now", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Button(
+                        onClick = {
+                            try {
+                                val whatsappIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    data = android.net.Uri.parse("https://api.whatsapp.com/send?phone=+923211227229&text=Hi,%20I%20need%20help%20with%20my%20booking%20on%20HomeServe")
+                                }
+                                context.startActivity(whatsappIntent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("WhatsApp", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
+
         // --- FAQ Section ---
         Text(
             text = "Frequently Asked Questions",
@@ -1015,7 +1092,7 @@ private fun PayoutMethodsSection() {
             Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Outstanding Balance", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("$24,500", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                Text("Rs. 24,500", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { /* Process direct transfer simulation */ },

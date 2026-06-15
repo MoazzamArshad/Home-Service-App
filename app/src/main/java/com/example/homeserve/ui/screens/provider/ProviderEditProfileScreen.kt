@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -565,7 +567,7 @@ fun ProviderEditProfileScreen(
                         HorizontalDivider(color = Color(0xFFF3F4F6))
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Change Password Row Option
+                        // Change PIN Code Row Option
                         Surface(
                             onClick = { showPasswordDialog = true },
                             modifier = Modifier.fillMaxWidth(),
@@ -579,7 +581,7 @@ fun ProviderEditProfileScreen(
                                 Icon(Icons.Default.Lock, contentDescription = null, tint = BrandBlue)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = "Change Password",
+                                    text = "Change PIN Code",
                                     fontWeight = FontWeight.SemiBold,
                                     color = BrandBlue,
                                     fontSize = 14.sp,
@@ -748,13 +750,13 @@ fun ProviderEditProfileScreen(
         )
     }
 
-    // Change Password Dialog
+    // Change PIN Code Dialog
     if (showPasswordDialog) {
-        var newPassword by remember { mutableStateOf("") }
-        var confirmPassword by remember { mutableStateOf("") }
-        var passwordError by remember { mutableStateOf<String?>(null) }
-        var isNewPasswordVisible by remember { mutableStateOf(false) }
-        var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+        var newPin by remember { mutableStateOf("") }
+        var confirmPin by remember { mutableStateOf("") }
+        var pinError by remember { mutableStateOf<String?>(null) }
+        var isNewPinVisible by remember { mutableStateOf(false) }
+        var isConfirmPinVisible by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showPasswordDialog = false },
@@ -762,7 +764,7 @@ fun ProviderEditProfileScreen(
             shape = RoundedCornerShape(16.dp),
             title = {
                 Text(
-                    text = "Change Password",
+                    text = "Change PIN Code",
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF111827)
                 )
@@ -770,23 +772,28 @@ fun ProviderEditProfileScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        text = "Your account is secured via Phone OTP and Google. Setting a profile password adds an extra layer of credentials.",
+                        text = "Your account is secured via Phone and PIN code. Enter a 4-digit numeric PIN below.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF6B7280)
                     )
 
-                    // New Password
+                    // New PIN Code
                     OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password") },
+                        value = newPin,
+                        onValueChange = { input ->
+                            if (input.length <= 4) {
+                                newPin = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("New PIN Code") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = if (isNewPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            val image = if (isNewPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
-                                Icon(image, contentDescription = "Toggle password visibility")
+                            val image = if (isNewPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            IconButton(onClick = { isNewPinVisible = !isNewPinVisible }) {
+                                Icon(image, contentDescription = "Toggle PIN visibility")
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
@@ -795,18 +802,23 @@ fun ProviderEditProfileScreen(
                         )
                     )
 
-                    // Confirm Password
+                    // Confirm PIN Code
                     OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm Password") },
+                        value = confirmPin,
+                        onValueChange = { input ->
+                            if (input.length <= 4) {
+                                confirmPin = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("Confirm PIN Code") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = if (isConfirmPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            val image = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
-                                Icon(image, contentDescription = "Toggle password visibility")
+                            val image = if (isConfirmPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            IconButton(onClick = { isConfirmPinVisible = !isConfirmPinVisible }) {
+                                Icon(image, contentDescription = "Toggle PIN visibility")
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
@@ -815,10 +827,10 @@ fun ProviderEditProfileScreen(
                         )
                     )
 
-                    if (passwordError != null) {
+                    if (pinError != null) {
                         Text(
-                            text = passwordError ?: "",
-                            color = Color(0xFFDC2626),
+                            text = pinError ?: "",
+                            color = Color.Red,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -828,22 +840,22 @@ fun ProviderEditProfileScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val cleanNew = newPassword.trim()
-                        val cleanConf = confirmPassword.trim()
+                        val cleanNew = newPin.trim()
+                        val cleanConf = confirmPin.trim()
 
-                        if (cleanNew.length < 6) {
-                            passwordError = "Password must be at least 6 characters."
+                        if (cleanNew.length != 4) {
+                            pinError = "PIN code must be exactly 4 digits."
                             return@Button
                         }
                         if (cleanNew != cleanConf) {
-                            passwordError = "Passwords do not match."
+                            pinError = "PIN codes do not match."
                             return@Button
                         }
 
                         passwordInput = cleanNew
-                        passwordError = null
+                        pinError = null
                         showPasswordDialog = false
-                        Toast.makeText(context, "Password updated. Click 'Save Changes' to apply.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "PIN code updated. Click 'Save Changes' to apply.", Toast.LENGTH_LONG).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                     shape = RoundedCornerShape(10.dp)

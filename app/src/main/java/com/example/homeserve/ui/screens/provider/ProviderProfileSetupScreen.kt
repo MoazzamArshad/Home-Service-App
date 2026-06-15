@@ -31,11 +31,13 @@ import com.example.homeserve.ui.components.PrimaryButton
 import com.example.homeserve.ui.theme.BrandBlue
 import com.example.homeserve.ui.viewmodel.ProviderViewModel
 import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.Image
+import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import androidx.activity.compose.BackHandler
@@ -109,7 +111,7 @@ fun ProviderProfileSetupScreen(
         }
     }
 
-    var uploadedFileName by remember { mutableStateOf<String?>(if (profileState != null) "id_card_front.jpg" else null) }
+    var uploadedFileName by remember { mutableStateOf<String?>(if (profileState != null && profileState?.documentUrl?.isNotBlank() == true && (profileState?.documentUrl?.startsWith("http") == true || profileState?.documentUrl?.startsWith("content") == true)) "id_card_front.jpg" else null) }
     var isUploading by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -150,8 +152,10 @@ fun ProviderProfileSetupScreen(
             radiusKm = profile.radiusKm
             latitude = profile.providerLatitude
             longitude = profile.providerLongitude
-            if (uploadedFileName == null) {
+            if (profile.documentUrl.isNotBlank() && (profile.documentUrl.startsWith("http") || profile.documentUrl.startsWith("content"))) {
                 uploadedFileName = "id_card_front.jpg"
+            } else {
+                uploadedFileName = null
             }
         }
     }
@@ -209,7 +213,8 @@ fun ProviderProfileSetupScreen(
                       idNumber.isNotBlank() && 
                       address.isNotBlank() &&
                       (locationMethod == "manual" || useRealGps) &&
-                      uploadedFileName != null
+                      uploadedFileName != null &&
+                      (selectedPhotoUri != null || (profileState != null && profileState?.profilePhotoUrl?.isNotEmpty() == true))
 
     val scrollState = rememberScrollState()
 
@@ -284,6 +289,13 @@ fun ProviderProfileSetupScreen(
                                 bitmap = profileBitmap!!.asImageBitmap(),
                                 contentDescription = "Profile Photo",
                                 modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else if (profileState?.profilePhotoUrl?.isNotEmpty() == true) {
+                            AsyncImage(
+                                model = profileState!!.profilePhotoUrl,
+                                contentDescription = "Profile Photo",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
                             )
                         } else {
@@ -649,76 +661,90 @@ fun ProviderProfileSetupScreen(
                 PrimaryButton(
                     text = "Continue",
                     onClick = {
-                        val finalLat = if (locationMethod == "gps" && useRealGps) {
-                            latitude
+                        if (!isFormValid) {
+                            val missing = mutableListOf<String>()
+                            if (fullName.isBlank()) missing.add("Full Name")
+                            if (phoneNumber.length < 10) missing.add("Phone Number (min 10 digits)")
+                            if (idNumber.isBlank()) missing.add("ID / CNIC Number")
+                            if (address.isBlank()) missing.add("Service Address")
+                            if (locationMethod == "gps" && !useRealGps) missing.add("GPS Location Coordinates")
+                            if (uploadedFileName == null) missing.add("ID Card Front Pic")
+                            if (selectedPhotoUri == null && (profileState == null || profileState?.profilePhotoUrl?.isNotEmpty() != true)) missing.add("Profile Picture")
+
+                            val msg = "Please complete the following: " + missing.joinToString(", ")
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         } else {
-                            var resolvedLat = 31.45036
-                            var found = false
-                            try {
-                                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                                val addresses = geocoder.getFromLocationName(address, 1)
-                                if (!addresses.isNullOrEmpty()) {
-                                    resolvedLat = addresses[0].latitude
-                                    found = true
+                            val finalLat = if (locationMethod == "gps" && useRealGps) {
+                                latitude
+                            } else {
+                                var resolvedLat = 31.45036
+                                var found = false
+                                try {
+                                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                                    val addresses = geocoder.getFromLocationName(address, 1)
+                                    if (!addresses.isNullOrEmpty()) {
+                                        resolvedLat = addresses[0].latitude
+                                        found = true
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
                                 }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                            if (!found) {
-                                val addrLower = address.lowercase()
-                                resolvedLat = when {
-                                    addrLower.contains("model town") -> 31.4789
-                                    addrLower.contains("gulberg") -> 31.5204
-                                    addrLower.contains("dha") -> 31.4764
-                                    addrLower.contains("johar town") -> 31.4697
-                                    addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 31.5036
-                                    else -> 31.45036
+                                if (!found) {
+                                    val addrLower = address.lowercase()
+                                    resolvedLat = when {
+                                        addrLower.contains("model town") -> 31.4789
+                                        addrLower.contains("gulberg") -> 31.5204
+                                        addrLower.contains("dha") -> 31.4764
+                                        addrLower.contains("johar town") -> 31.4697
+                                        addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 31.5036
+                                        else -> 31.45036
+                                    }
                                 }
+                                resolvedLat
                             }
-                            resolvedLat
+                            val finalLon = if (locationMethod == "gps" && useRealGps) {
+                                longitude
+                            } else {
+                                var resolvedLon = 74.35334
+                                var found = false
+                                try {
+                                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                                    val addresses = geocoder.getFromLocationName(address, 1)
+                                    if (!addresses.isNullOrEmpty()) {
+                                        resolvedLon = addresses[0].longitude
+                                        found = true
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                                if (!found) {
+                                    val addrLower = address.lowercase()
+                                    resolvedLon = when {
+                                        addrLower.contains("model town") -> 74.3216
+                                        addrLower.contains("gulberg") -> 74.3587
+                                        addrLower.contains("dha") -> 74.4072
+                                        addrLower.contains("johar town") -> 74.2728
+                                        addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 74.3321
+                                        else -> 74.35334
+                                    }
+                                }
+                                resolvedLon
+                            }
+                            viewModel.saveTempProfileInfo(
+                                fullName,
+                                phoneNumber,
+                                idNumber,
+                                address,
+                                radiusKm,
+                                finalLat,
+                                finalLon,
+                                selectedPhotoUri?.toString() ?: "",
+                                selectedDocUri?.toString() ?: ""
+                            )
+                            onContinueClick()
                         }
-                        val finalLon = if (locationMethod == "gps" && useRealGps) {
-                            longitude
-                        } else {
-                            var resolvedLon = 74.35334
-                            var found = false
-                            try {
-                                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                                val addresses = geocoder.getFromLocationName(address, 1)
-                                if (!addresses.isNullOrEmpty()) {
-                                    resolvedLon = addresses[0].longitude
-                                    found = true
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                            if (!found) {
-                                val addrLower = address.lowercase()
-                                resolvedLon = when {
-                                    addrLower.contains("model town") -> 74.3216
-                                    addrLower.contains("gulberg") -> 74.3587
-                                    addrLower.contains("dha") -> 74.4072
-                                    addrLower.contains("johar town") -> 74.2728
-                                    addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 74.3321
-                                    else -> 74.35334
-                                }
-                            }
-                            resolvedLon
-                        }
-                        viewModel.saveTempProfileInfo(
-                            fullName,
-                            phoneNumber,
-                            idNumber,
-                            address,
-                            radiusKm,
-                            finalLat,
-                            finalLon,
-                            selectedPhotoUri?.toString() ?: "",
-                            selectedDocUri?.toString() ?: ""
-                        )
-                        onContinueClick()
                     },
-                    enabled = isFormValid,
+                    enabled = true,
                     modifier = Modifier.height(54.dp)
                 )
             }

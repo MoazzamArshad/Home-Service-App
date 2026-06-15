@@ -252,7 +252,7 @@ fun BookingManagementCard(
                     color = Color(0xFF6B7280)
                 )
                 Text(
-                    text = "$${booking.totalAmount}",
+                    text = "Rs. ${booking.totalAmount}",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = Color(0xFF111827)
                 )

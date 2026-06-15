@@ -127,7 +127,7 @@ fun BookingDetailsScreen(
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Amount", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                         Text(
-                            text = "$${booking.totalAmount}",
+                            text = "Rs. ${booking.totalAmount}",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = BrandBlue
                         )

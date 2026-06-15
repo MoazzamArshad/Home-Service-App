@@ -48,8 +48,8 @@ fun EmailLoginScreen(
     var selectedTab by remember { mutableStateOf(0) }
 
     // Sign In – pre-filled for CodeCanyon reviewers
-    var signInEmail by remember { mutableStateOf("demo@homeserve.com") }
-    var signInPassword by remember { mutableStateOf("Demo@123") }
+    var signInEmail by remember { mutableStateOf("") }
+    var signInPassword by remember { mutableStateOf("") }
     var signInPasswordVisible by remember { mutableStateOf(false) }
 
     // Register

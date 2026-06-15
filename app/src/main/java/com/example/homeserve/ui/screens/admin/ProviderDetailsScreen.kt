@@ -89,7 +89,7 @@ fun ProviderDetailsScreen(
         provider.categoryId.split(",").map { it.trim() }.filter { it.isNotEmpty() }
     }
     val documents = remember(provider.documentUrl) {
-        if (provider.documentUrl.isNotEmpty()) {
+        if (provider.documentUrl.isNotEmpty() && (provider.documentUrl.startsWith("http") || provider.documentUrl.startsWith("content"))) {
             val displayName = when {
                 provider.documentUrl.startsWith("content://") -> {
                     val lastSegment = provider.documentUrl.substringAfterLast("/")
@@ -108,7 +108,7 @@ fun ProviderDetailsScreen(
             }
             listOf(ProviderDetailDoc(displayName, provider.documentUrl))
         } else {
-            listOf(ProviderDetailDoc("id_card_front.jpg", ""))
+            emptyList()
         }
     }
 
@@ -303,35 +303,44 @@ fun ProviderDetailsScreen(
             // Documents
             Text("Verification Documents", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF6B7280))
             Spacer(modifier = Modifier.height(12.dp))
-            documents.forEach { doc ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (doc.url.startsWith("http://") || doc.url.startsWith("https://")) {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(doc.url))
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
+            if (documents.isEmpty()) {
+                Text(
+                    text = "No documents uploaded.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF9CA3AF),
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
+                documents.forEach { doc ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (doc.url.startsWith("http://") || doc.url.startsWith("https://")) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(doc.url))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            previewDocName = doc.name
+                                        }
+                                    } else {
                                         previewDocName = doc.name
                                     }
-                                } else {
-                                    previewDocName = doc.name
                                 }
-                            }
-                            .padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.Description, contentDescription = null, tint = Color(0xFF9CA3AF))
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(doc.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Color(0xFF374151))
-                        Text("View", color = BrandBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                                .padding(16.dp)
+                        ) {
+                            Icon(Icons.Default.Description, contentDescription = null, tint = Color(0xFF9CA3AF))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(doc.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Color(0xFF374151))
+                            Text("View", color = BrandBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
                 }
             }

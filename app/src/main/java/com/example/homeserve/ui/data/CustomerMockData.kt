@@ -63,20 +63,31 @@ object CustomerMockData {
         ServiceItem("elec-1", "electrician", "Fan Installation", "Professional ceiling fan installation with testing", 299, 4.7, 1234),
         ServiceItem("elec-2", "electrician", "Switch & Socket Repair", "Fix or replace faulty switches and sockets", 149, 4.8, 2156),
         ServiceItem("elec-3", "electrician", "Wiring & Rewiring", "Complete electrical wiring solutions", 499, 4.6, 856),
+        ServiceItem("elec-gen", "electrician", "General Electrical Work", "For any electrical needs not listed. Describe the problem and the technician will quote a price.", 0, 4.8, 100),
+        
         ServiceItem("plumb-1", "plumber", "Tap Repair", "Fix leaking or damaged taps", 199, 4.5, 1845),
         ServiceItem("plumb-2", "plumber", "Toilet Installation", "Complete toilet installation service", 599, 4.7, 923),
         ServiceItem("plumb-3", "plumber", "Pipe Leakage", "Detect and fix all types of pipe leaks", 349, 4.8, 1567),
+        ServiceItem("plumb-gen", "plumber", "General Plumbing Work", "For any plumbing needs not listed. Describe the problem and the plumber will quote a price.", 0, 4.8, 100),
+        
         ServiceItem("clean-1", "cleaning", "Deep Cleaning", "Thorough cleaning of entire home", 1499, 4.9, 3421),
         ServiceItem("clean-2", "cleaning", "Bathroom Cleaning", "Complete bathroom sanitization", 499, 4.7, 2134),
         ServiceItem("clean-3", "cleaning", "Kitchen Cleaning", "Deep kitchen cleaning and degreasing", 699, 4.8, 1876),
+        ServiceItem("clean-gen", "cleaning", "General Cleaning Work", "For custom cleaning requirements. Describe the job details and the helper will quote a price.", 0, 4.8, 100),
+        
         ServiceItem("app-1", "appliance", "AC Repair", "Air conditioner servicing and repair", 399, 4.6, 2134),
         ServiceItem("app-2", "appliance", "Washing Machine Repair", "All brands washing machine repair", 349, 4.7, 1543),
         ServiceItem("app-3", "appliance", "Refrigerator Repair", "Fridge cooling and other issues", 449, 4.5, 1234),
+        ServiceItem("app-gen", "appliance", "General Appliance Repair", "For any appliance repairs not listed. Describe the fault and the technician will quote a price.", 0, 4.8, 100),
+        
         ServiceItem("beauty-1", "beauty", "Haircut & Styling", "Professional haircut at your doorstep", 299, 4.8, 3421),
         ServiceItem("beauty-2", "beauty", "Facial & Cleanup", "Premium facial treatments", 799, 4.9, 2876),
         ServiceItem("beauty-3", "beauty", "Manicure & Pedicure", "Complete nail care service", 599, 4.7, 1987),
+        ServiceItem("beauty-gen", "beauty", "General Beauty Service", "For custom beauty and groom needs. Describe the services and the beautician will quote a price.", 0, 4.8, 100),
+        
         ServiceItem("paint-1", "painting", "Wall Painting", "Professional wall painting service", 2999, 4.6, 876),
-        ServiceItem("paint-2", "painting", "Texture Painting", "Decorative texture painting", 3999, 4.7, 543)
+        ServiceItem("paint-2", "painting", "Texture Painting", "Decorative texture painting", 3999, 4.7, 543),
+        ServiceItem("paint-gen", "painting", "General Painting Work", "For custom paint jobs. Describe your walls/needs and the painter will quote a price.", 0, 4.8, 100)
     )
 
     val mockBookings = listOf(

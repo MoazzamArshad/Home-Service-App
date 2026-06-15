@@ -471,7 +471,7 @@ fun SubServiceCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "$${service.price}",
+                    text = "Rs. ${service.price}",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = BrandBlue
                 )
@@ -646,7 +646,7 @@ fun AddServiceModal(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Base Price ($)", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Color(0xFF374151))
+                Text("Base Price (Rs.)", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Color(0xFF374151))
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = priceStr,

@@ -368,9 +368,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                     .document(currentUserId)
 
                 val currentProfile = _userProfile.value
-                val resolvedEmail = email.ifBlank {
-                    currentProfile?.email ?: "customer_${loggedInPhone.replace("[^0-9]".toRegex(), "")}@example.com"
-                }
+                val resolvedEmail = email.trim()
 
                 // Upload profile photo to Firebase Storage if a new one was picked
                 var finalPhotoUrl = currentProfile?.profilePhotoUrl ?: ""
@@ -982,10 +980,16 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
         problemPhotoUrl: String = "",
         problemAudioUrl: String = "",
         customerPhoneInput: String = "",
-        onResult: (Boolean) -> Unit = {}
+        onResult: (Boolean, String?) -> Unit = { _, _ -> }
     ) {
         viewModelScope.launch {
             _isLoading.value = true
+            val activeCount = _userBookings.value.count { it.status.lowercase() in listOf("pending", "accepted", "in_progress") }
+            if (activeCount >= 3) {
+                _isLoading.value = false
+                onResult(false, "You can book up to 3 services at a time. Please complete or cancel your active bookings first.")
+                return@launch
+            }
             var custName = "Customer"
             var custPhone = loggedInPhone
             try {
@@ -1043,7 +1047,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
             // Refresh bookings after creation
             fetchUserBookings()
             _isLoading.value = false
-            onResult(success)
+            onResult(success, if (success) null else "Failed to confirm booking on the server. Please try again.")
         }
     }
 
@@ -1316,6 +1320,206 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
             val success = repository.submitBookingReview(bookingId, rating, reviewText, reviewTags)
             _isLoading.value = false
             onResult(success)
+        }
+    }
+
+    private val _serviceReviews = MutableStateFlow<List<Booking>>(emptyList())
+    val serviceReviews: StateFlow<List<Booking>> = _serviceReviews.asStateFlow()
+
+    fun fetchReviewsForService(serviceId: String) {
+        viewModelScope.launch {
+            try {
+                val snapshot = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("bookings")
+                    .whereEqualTo("serviceId", serviceId)
+                    .get().await()
+                
+                val reviews = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Booking::class.java)
+                }.filter { it.rating > 0 }
+                
+                _serviceReviews.value = reviews
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun signInWithPhoneAndPin(
+        phone: String,
+        pin: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        loggedInPhone = phone
+        currentUserId = "user_${phone.replace("[^0-9]".toRegex(), "")}"
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val userRef = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(currentUserId)
+                val doc = userRef.get().await()
+                if (!doc.exists()) {
+                    _isLoading.value = false
+                    onComplete(false, "Account not found. Please register first.")
+                    return@launch
+                }
+                val profile = doc.toObject(com.example.homeserve.data.model.User::class.java)
+                if (profile == null) {
+                    _isLoading.value = false
+                    onComplete(false, "Failed to load account profile.")
+                    return@launch
+                }
+                
+                if (profile.password != pin) {
+                    _isLoading.value = false
+                    onComplete(false, "Incorrect PIN code. Please try again.")
+                    return@launch
+                }
+                
+                if (profile.isBlocked) {
+                    _isLoading.value = false
+                    _isBlockedEvent.value = true
+                    onComplete(false, "Your account has been blocked. Please contact support.")
+                    return@launch
+                }
+                
+                _isCustomerLoggedIn.value = true
+                _userProfile.value = profile
+                fetchUserBookings()
+                startListeningToUserProfile()
+                startListeningToNotifications()
+                loadSavedAddresses()
+                saveFcmTokenForCurrentUser()
+                _isLoading.value = false
+                onComplete(true, null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _isLoading.value = false
+                onComplete(false, e.message ?: "Authentication failed.")
+            }
+        }
+    }
+
+    fun registerWithPhoneAndPin(
+        name: String,
+        phone: String,
+        email: String,
+        pin: String,
+        address: String,
+        latitude: Double = 0.0,
+        longitude: Double = 0.0,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        loggedInPhone = phone
+        currentUserId = "user_${phone.replace("[^0-9]".toRegex(), "")}"
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                var resolvedLat = latitude
+                var resolvedLon = longitude
+                if (resolvedLat == 0.0 && resolvedLon == 0.0) {
+                    resolvedLat = 31.5204
+                    resolvedLon = 74.3587
+                    try {
+                        val ctx = com.example.homeserve.HomeServeApp.getContext()
+                        val geocoder = android.location.Geocoder(ctx)
+                        val list = geocoder.getFromLocationName(address, 1)
+                        if (!list.isNullOrEmpty()) {
+                            resolvedLat = list[0].latitude
+                            resolvedLon = list[0].longitude
+                        } else {
+                            val addrLower = address.lowercase()
+                            resolvedLat = when {
+                                addrLower.contains("model town") -> 31.4790
+                                addrLower.contains("gulberg") -> 31.5222
+                                addrLower.contains("dha") -> 31.4697
+                                addrLower.contains("johar town") -> 31.4697
+                                addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 31.5065
+                                else -> 31.5204
+                            }
+                            resolvedLon = when {
+                                addrLower.contains("model town") -> 74.3216
+                                addrLower.contains("gulberg") -> 74.3587
+                                addrLower.contains("dha") -> 74.4072
+                                addrLower.contains("johar town") -> 74.2728
+                                addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 74.3321
+                                else -> 74.3587
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        val addrLower = address.lowercase()
+                        resolvedLat = when {
+                            addrLower.contains("model town") -> 31.4790
+                            addrLower.contains("gulberg") -> 31.5222
+                            addrLower.contains("dha") -> 31.4697
+                            addrLower.contains("johar town") -> 31.4697
+                            addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 31.5065
+                            else -> 31.5204
+                        }
+                        resolvedLon = when {
+                            addrLower.contains("model town") -> 74.3216
+                            addrLower.contains("gulberg") -> 74.3587
+                            addrLower.contains("dha") -> 74.4072
+                            addrLower.contains("johar town") -> 74.2728
+                            addrLower.contains("kalma chowk") || addrLower.contains("kalma chawk") -> 74.3321
+                            else -> 74.3587
+                        }
+                    }
+                }
+
+                val userRef = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(currentUserId)
+                val doc = userRef.get().await()
+                if (doc.exists()) {
+                    _isLoading.value = false
+                    onComplete(false, "An account with this phone number already exists.")
+                    return@launch
+                }
+                
+                val newUser = com.example.homeserve.data.model.User(
+                    uid = currentUserId,
+                    name = name,
+                    email = email,
+                    phone = phone,
+                    role = "user",
+                    address = address,
+                    password = pin,
+                    createdAt = com.google.firebase.Timestamp.now()
+                )
+                
+                userRef.set(newUser).await()
+                
+                try {
+                    val savedAddr = com.example.homeserve.data.model.SavedAddress(
+                        id = "default_address",
+                        label = "Default Home",
+                        address = address,
+                        latitude = resolvedLat,
+                        longitude = resolvedLon,
+                        isDefault = true
+                    )
+                    userRef.collection("addresses").document("default_address").set(savedAddr).await()
+                } catch (addrEx: Exception) {
+                    addrEx.printStackTrace()
+                }
+                
+                _isCustomerLoggedIn.value = true
+                _userProfile.value = newUser
+                fetchUserBookings()
+                startListeningToUserProfile()
+                startListeningToNotifications()
+                loadSavedAddresses()
+                saveFcmTokenForCurrentUser()
+                _isLoading.value = false
+                onComplete(true, null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _isLoading.value = false
+                onComplete(false, e.message ?: "Registration failed.")
+            }
         }
     }
 }

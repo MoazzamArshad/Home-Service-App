@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeServe Admin Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Ambient Blur Background Elements -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <!-- ── LOGIN INTERFACE ──────────────────────────────────────── -->
+    <div id="login-container" class="page-container active">
+        <div class="login-card">
+            <div class="login-logo">
+                <span class="logo-emoji">🏠</span>
+            </div>
+            <h2>HomeServe Admin</h2>
+            <p>Access the platform management portal</p>
+
+            <div id="login-error" class="error-banner hidden">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span id="error-message">Invalid credentials.</span>
+            </div>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="login-email">Username or Email</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-envelope"></i>
+                        <input type="text" id="login-email" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <button type="submit" id="btn-login" class="btn-primary">
+                    <span id="login-btn-text">Login to Dashboard</span>
+                    <span id="login-spinner" class="spinner hidden"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── DASHBOARD WORKSPACE ──────────────────────────────────── -->
+    <div id="app-container" class="page-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-emoji">🏠</span>
+                <span class="brand-name">HomeServe</span>
+            </div>
+
+            <div class="admin-profile-card">
+                <div class="admin-avatar">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <div class="admin-info">
+                    <h4 id="admin-display-name">Admin User</h4>
+                    <span id="admin-display-email">admin@homeserve.com</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="#" class="menu-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="bookings">
+                    <i class="fa-solid fa-receipt"></i><span>Bookings</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="providers">
+                    <i class="fa-solid fa-user-tie"></i><span>Service Providers</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="customers">
+                    <i class="fa-solid fa-users"></i><span>Customers</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="categories">
+                    <i class="fa-solid fa-sliders"></i><span>Categories</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="support">
+                    <i class="fa-solid fa-headset"></i><span>Complaints & Tickets</span>
+                    <span id="badge-support-count" class="menu-badge hidden">0</span>
+                </a>
+            </nav>
+
+            <!-- <button id="btn-seed" class="menu-item seed-item" style="color: var(--warning); border-top: 1px solid rgba(255,255,255,0.05); margin-top: auto;">
+                <i class="fa-solid fa-database"></i><span>Seed Mock Data</span>
+            </button> -->
+
+            <button id="btn-logout" class="menu-item logout-item">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i><span>Logout</span>
+            </button>
+        </aside>
+
+        <!-- Main Workspace Panel -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1 id="tab-title">Dashboard Overview</h1>
+                    <p id="tab-subtitle">Real-time platform metrics and analytics</p>
+                </div>
+                <div class="header-actions">
+                    <div class="live-indicator">
+                        <span class="pulse-dot"></span>
+                        <span>Live Sync Enabled</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- ── 1. DASHBOARD TAB ── -->
+                <div id="tab-dashboard" class="tab-pane active">
+                    <!-- Metrics Row -->
+                    <div class="metrics-grid">
+                        <div class="metric-card glass">
+                            <div class="metric-icon bg-blue">
+                                <i class="fa-solid fa-receipt"></i>
+                            </div>
+                            <div class="metric-details">
+                                <h3>Total Bookings</h3>
+                                <p id="metric-total-bookings">0</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-icon bg-green">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div class="metric-details">
+                                <h3>Completed</h3>
+                                <p id="metric-completed-bookings">0</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-icon bg-yellow">
+                                <i class="fa-solid fa-spinner"></i>
+                            </div>
+                            <div class="metric-details">
+                                <h3>Active Jobs</h3>
+                                <p id="metric-active-bookings">0</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-icon bg-red">
+                                <i class="fa-solid fa-ban"></i>
+                            </div>
+                            <div class="metric-details">
+                                <h3>Cancelled</h3>
+                                <p id="metric-cancelled-bookings">0</p>
+                            </div>
+                        </div>
+                        <div class="metric-card glass card-revenue">
+                            <div class="metric-icon bg-purple">
+                                <i class="fa-solid fa-money-bill-trend-up"></i>
+                            </div>
+                            <div class="metric-details">
+                                <h3>Total Money Transferred</h3>
+                                <p id="metric-total-revenue">Rs. 0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="charts-grid">
+                        <div class="chart-container glass">
+                            <h4>Booking Volume Trends</h4>
+                            <canvas id="bookingsChart"></canvas>
+                        </div>
+                        <div class="chart-container glass">
+                            <h4>Earnings (PKR)</h4>
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Bookings Table Section -->
+                    <div class="section-card glass mt-4">
+                        <div class="section-header">
+                            <h4>Recent Booking Activities</h4>
+                            <a href="#" class="btn-link" onclick="switchTab('bookings')">View All Bookings</a>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Booking ID</th>
+                                        <th>Customer</th>
+                                        <th>Service</th>
+                                        <th>Provider</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-bookings-tbody">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">Loading recent activities...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── 2. BOOKINGS TAB ── -->
+                <div id="tab-bookings" class="tab-pane">
+                    <div class="section-card glass">
+                        <div class="section-header flex-column md-flex-row gap-3">
+                            <div class="search-bar">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="booking-search"
+                                    placeholder="Search bookings by customer name, service...">
+                            </div>
+                            <div class="filter-group">
+                                <select id="booking-status-filter" class="form-select">
+                                    <option value="all">All Statuses</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="accepted">Accepted</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Booking ID</th>
+                                        <th>Customer</th>
+                                        <th>Service</th>
+                                        <th>Provider</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Total Price</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-bookings-tbody">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">Loading bookings data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── 3. SERVICE PROVIDERS TAB ── -->
+                <div id="tab-providers" class="tab-pane">
+                    <!-- Segment Controller -->
+                    <div class="tab-segment-control">
+                        <button class="segment-btn active" data-segment="pending-approvals">Pending Approvals</button>
+                        <button class="segment-btn" data-segment="all-providers">All Service Providers</button>
+                    </div>
+
+                    <!-- Pending Approvals Segment -->
+                    <div id="segment-pending-approvals" class="segment-pane active">
+                        <div class="grid-layout mt-3" id="pending-providers-grid">
+                            <div class="text-center py-4 glass w-100">Loading pending provider accounts...</div>
+                        </div>
+                    </div>
+
+                    <!-- All Service Providers Segment -->
+                    <div id="segment-all-providers" class="segment-pane">
+                        <div class="section-card glass mt-3">
+                            <div class="section-header">
+                                <div class="search-bar">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="provider-search"
+                                        placeholder="Search providers by name, skill, phone...">
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Avatar</th>
+                                            <th>Full Name</th>
+                                            <th>Category</th>
+                                            <th>Email & Phone</th>
+                                            <th>Reviews & Rating</th>
+                                            <th>Approval Status</th>
+                                            <th>Action Status</th>
+                                            <th>Restrict Access</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="all-providers-tbody">
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4">Loading providers records...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── 4. CUSTOMERS TAB ── -->
+                <div id="tab-customers" class="tab-pane">
+                    <div class="section-card glass">
+                        <div class="section-header">
+                            <div class="search-bar">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="customer-search"
+                                    placeholder="Search customers by name, phone...">
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email Address</th>
+                                        <th>Phone Number</th>
+                                        <th>Created Date</th>
+                                        <th>Current Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-customers-tbody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">Loading customers data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── 5. CATEGORIES TAB ── -->
+                <div id="tab-categories" class="tab-pane">
+                    <div class="categories-layout">
+                        <!-- Add Category Card -->
+                        <div class="section-card glass">
+                            <h4>Add New Service Category</h4>
+                            <p class="text-muted mb-4">Create a new category category to make it available for booking
+                            </p>
+                            <form id="category-form">
+                                <div class="input-group">
+                                    <label for="cat-name">Category Name</label>
+                                    <input type="text" id="cat-name" placeholder="e.g. Electrician, Carpenter" required
+                                        class="form-control">
+                                </div>
+                                <div class="input-group">
+                                    <label for="cat-icon">Emoji Icon</label>
+                                    <input type="text" id="cat-icon" placeholder="e.g. ⚡, 🪚, 🧼" required
+                                        class="form-control">
+                                </div>
+                                <button type="submit" class="btn-primary mt-2">Create Category</button>
+                            </form>
+                        </div>
+
+                        <!-- Categories List -->
+                        <div class="section-card glass">
+                            <h4>Active Categories</h4>
+                            <div class="categories-list-grid" id="categories-container">
+                                <div class="text-center py-4">Loading categories...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── 6. COMPLAINTS & TICKETS TAB ── -->
+                <div id="tab-support" class="tab-pane">
+                    <div class="section-card glass">
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket ID</th>
+                                        <th>Customer</th>
+                                        <th>Email & Phone</th>
+                                        <th>Complaint Subject</th>
+                                        <th>Ticket Details</th>
+                                        <th>Date Submitted</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="support-tickets-tbody">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">Loading support tickets...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── DETAIL MODAL OVERLAYS ───────────────────────────────── -->
+    <!-- CNIC Viewer Modal -->
+    <div id="cnic-modal" class="modal-overlay hidden">
+        <div class="modal-card cnic-viewer-card glass">
+            <div class="modal-header">
+                <h3>Vetting Verification: CNIC Document</h3>
+                <button onclick="closeCnicModal()" class="btn-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body cnic-modal-body">
+                <img id="cnic-modal-image" src="" referrerpolicy="no-referrer" alt="CNIC Document Preview">
+                <div class="cnic-loading-placeholder" id="cnic-modal-loader">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Details Modal -->
+    <div id="booking-modal" class="modal-overlay hidden">
+        <div class="modal-card booking-detail-card glass">
+            <div class="modal-header">
+                <h3>Booking Details Panel</h3>
+                <button onclick="closeBookingModal()" class="btn-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="booking-modal-body">
+                <!-- Populate dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>

@@ -177,7 +177,7 @@ fun ReportsScreen(
                     Text("Total Revenue", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4B5563))
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            text = "$$totalRevenue",
+                            text = "Rs. $totalRevenue",
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color(0xFF111827)
                         )
@@ -199,7 +199,7 @@ fun ReportsScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Commission", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4B5563))
-                            Text("$$commission", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF111827))
+                            Text("Rs. $commission", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF111827))
                         }
                     }
                 }

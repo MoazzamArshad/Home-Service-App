@@ -61,7 +61,7 @@ fun AdminDashboardScreen(
         DashboardStatItem("Users", totalUsers.toString(), Icons.Default.Person, Color(0xFFEFF6FF), Color(0xFF2563EB), "/admin/customers"),
         DashboardStatItem("Providers", totalProviders.toString(), Icons.Default.Engineering, Color(0xFFECFDF5), Color(0xFF059669), "/admin/providers"),
         DashboardStatItem("Bookings", totalBookings.toString(), Icons.Default.Assignment, Color(0xFFF5F3FF), Color(0xFF7C3AED), "/admin/bookings"),
-        DashboardStatItem("Revenue", "$$totalRevenue", Icons.Default.Payments, Color(0xFFFFFBEB), Color(0xFFD97706), "/admin/reports")
+        DashboardStatItem("Revenue", "Rs. $totalRevenue", Icons.Default.Payments, Color(0xFFFFFBEB), Color(0xFFD97706), "/admin/reports")
     )
 
     val quickActions = listOf(

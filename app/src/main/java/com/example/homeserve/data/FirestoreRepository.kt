@@ -104,8 +104,6 @@ class FirestoreRepository {
             val categories = getCategories()
             if (categories.isEmpty()) {
                 val mockCategories = com.example.homeserve.ui.data.CustomerMockData.serviceCategories
-                val mockServices = com.example.homeserve.ui.data.CustomerMockData.services
-
                 mockCategories.forEach { mockCat ->
                     val category = Category(
                         categoryId = mockCat.id,
@@ -115,8 +113,14 @@ class FirestoreRepository {
                     )
                     db.collection("categories").document(mockCat.id).set(category).await()
                 }
+            }
 
-                mockServices.forEach { mockSrv ->
+            // Seed missing services
+            val mockServices = com.example.homeserve.ui.data.CustomerMockData.services
+            for (mockSrv in mockServices) {
+                val docRef = db.collection("services").document(mockSrv.id)
+                val doc = docRef.get().await()
+                if (!doc.exists()) {
                     val service = ServiceModel(
                         serviceId = mockSrv.id,
                         categoryId = mockSrv.categoryId,
@@ -125,11 +129,9 @@ class FirestoreRepository {
                         price = mockSrv.price,
                         isActive = true
                     )
-                    db.collection("services").document(mockSrv.id).set(service).await()
+                    docRef.set(service).await()
                 }
             }
-
-            // Mock provider seeding removed as requested to keep provider lists fully dynamic
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -237,16 +239,26 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun updateBookingStatus(bookingId: String, status: String, providerId: String = "", cancelReason: String = ""): Boolean {
+    suspend fun updateBookingStatus(bookingId: String, status: String, providerId: String = "", cancelReason: String = "", price: Int = -1): Boolean {
         return try {
             val updates = mutableMapOf<String, Any>(
                 "status" to status,
                 "updatedAt" to com.google.firebase.Timestamp.now()
             )
-            if (cancelReason.isNotEmpty()) {
-                updates["cancelReason"] = cancelReason
+            if (status == "pending") {
+                updates["providerId"] = ""
+                updates["providerName"] = ""
+                updates["providerPhone"] = ""
+                updates["cancelReason"] = ""
+            } else {
+                if (cancelReason.isNotEmpty()) {
+                    updates["cancelReason"] = cancelReason
+                }
             }
-            if (providerId.isNotEmpty()) {
+            if (price >= 0) {
+                updates["totalAmount"] = price
+            }
+            if (status != "pending" && providerId.isNotEmpty()) {
                 updates["providerId"] = providerId
                 try {
                     val providerSnapshot = db.collection("providers").document(providerId).get().await()
@@ -267,7 +279,35 @@ class FirestoreRepository {
                     }
                 }
             }
-            db.collection("bookings").document(bookingId).update(updates).await()
+            if (status == "accepted") {
+                val bookingRef = db.collection("bookings").document(bookingId)
+                db.runTransaction { transaction ->
+                    val snapshot = transaction.get(bookingRef)
+                    val currentStatus = snapshot.getString("status") ?: "pending"
+                    val currentProviderId = snapshot.getString("providerId") ?: ""
+                    if (currentStatus != "pending" || currentProviderId.isNotEmpty()) {
+                        throw Exception("Booking is already accepted by another provider.")
+                    }
+                    transaction.update(bookingRef, updates)
+                }.await()
+            } else {
+                db.collection("bookings").document(bookingId).update(updates).await()
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun updateBookingPrice(bookingId: String, price: Int): Boolean {
+        return try {
+            db.collection("bookings").document(bookingId).update(
+                mapOf(
+                    "totalAmount" to price,
+                    "updatedAt" to com.google.firebase.Timestamp.now()
+                )
+            ).await()
             true
         } catch (e: Exception) {
             e.printStackTrace()

@@ -29,6 +29,25 @@ import com.example.homeserve.ui.viewmodel.ChatViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
+import java.io.File
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,8 +67,117 @@ fun ChatScreen(
     val otherPartyPhotoUrl by viewModel.otherPartyPhotoUrl.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var textInput by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+
+    var showPriceUpdateDialog by remember { mutableStateOf(false) }
+
+    // Audio recording state
+    var isRecording by remember { mutableStateOf(false) }
+    var mediaRecorder by remember { mutableStateOf<android.media.MediaRecorder?>(null) }
+    var recordedFile by remember { mutableStateOf<File?>(null) }
+    var recordingTimer by remember { mutableStateOf(0) }
+    var isUploadingAudio by remember { mutableStateOf(false) }
+    var isUploadingImage by remember { mutableStateOf(false) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            isUploadingImage = true
+            scope.launch {
+                val storageRepo = com.example.homeserve.data.StorageRepository()
+                val url = storageRepo.uploadFile(context, uri, "chat_images")
+                isUploadingImage = false
+                if (url != null) {
+                    viewModel.sendImageMessage(url)
+                } else {
+                    Toast.makeText(context, "Failed to upload image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun startRecording() {
+        try {
+            val file = File.createTempFile("homeserve_chat_voice_", ".m4a", context.cacheDir)
+            val recorder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                android.media.MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                android.media.MediaRecorder()
+            }
+            recorder.apply {
+                setAudioSource(android.media.MediaRecorder.AudioSource.MIC)
+                setOutputFormat(android.media.MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(android.media.MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+            mediaRecorder = recorder
+            recordedFile = file
+            isRecording = true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Failed to start audio recording", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            recordingTimer = 0
+            while (isRecording) {
+                kotlinx.coroutines.delay(1000)
+                recordingTimer++
+                if (recordingTimer >= 60) {
+                    try {
+                        mediaRecorder?.stop()
+                        mediaRecorder?.release()
+                    } catch (e: Exception) {}
+                    mediaRecorder = null
+                    isRecording = false
+                    
+                    val fileToUpload = recordedFile
+                    val duration = recordingTimer
+                    if (fileToUpload != null && fileToUpload.exists() && duration > 0) {
+                        isUploadingAudio = true
+                        val storageRepo = com.example.homeserve.data.StorageRepository()
+                        val uri = android.net.Uri.fromFile(fileToUpload)
+                        val url = storageRepo.uploadFile(context, uri, "chat_audios")
+                        isUploadingAudio = false
+                        if (url != null) {
+                            viewModel.sendVoiceMessage(url, duration)
+                        } else {
+                            Toast.makeText(context, "Failed to upload voice note", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    recordedFile = null
+                    Toast.makeText(context, "Recording limit reached (60 seconds)", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val requestAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startRecording()
+        } else {
+            Toast.makeText(context, "Microphone permission is required to record voice notes", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                mediaRecorder?.release()
+            } catch (e: Exception) {}
+        }
+    }
 
     // Track typing state with 2-second debounce
     LaunchedEffect(textInput) {
@@ -164,11 +292,23 @@ fun ChatScreen(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )
+                    val priceText = bookingInfo?.let { "Rs. ${it.totalAmount}" } ?: ""
                     Text(
-                        text = serviceDetail,
+                        text = if (priceText.isNotEmpty()) "$serviceDetail  •  $priceText" else serviceDetail,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
+                }
+
+                // Edit Price Option for Providers
+                if (senderRole == "provider" && bookingInfo != null) {
+                    IconButton(onClick = { showPriceUpdateDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Update Price",
+                            tint = Color.White
+                        )
+                    }
                 }
 
                 // Status Indicator Dot
@@ -273,46 +413,233 @@ fun ChatScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value = textInput,
-                    onValueChange = { textInput = it },
-                    placeholder = { Text("Write a message...", color = Color(0xFF9CA3AF)) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(24.dp),
-                    maxLines = 4,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color(0xFF111827),
-                        unfocusedTextColor = Color(0xFF111827),
-                        focusedContainerColor = Color(0xFFF3F4F6),
-                        unfocusedContainerColor = Color(0xFFF3F4F6),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        cursorColor = BrandBlue
-                    )
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                FloatingActionButton(
-                    onClick = {
-                        if (textInput.isNotBlank()) {
-                            viewModel.sendMessage(textInput.trim())
-                            textInput = ""
+                if (isRecording) {
+                    IconButton(
+                        onClick = {
+                            try {
+                                mediaRecorder?.stop()
+                                mediaRecorder?.release()
+                            } catch (e: Exception) {}
+                            mediaRecorder = null
+                            isRecording = false
+                            recordedFile?.delete()
+                            recordedFile = null
                         }
-                    },
-                    shape = CircleShape,
-                    containerColor = BrandBlue,
-                    contentColor = Color.White,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send Message",
-                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Cancel recording",
+                            tint = Color(0xFFDC2626)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Text(
+                        text = "Recording: ${recordingTimer}s / 60s max",
+                        color = Color(0xFFDC2626),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
                     )
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    FloatingActionButton(
+                        onClick = {
+                            try {
+                                mediaRecorder?.stop()
+                                mediaRecorder?.release()
+                            } catch (e: Exception) {}
+                            mediaRecorder = null
+                            isRecording = false
+                            
+                            val fileToUpload = recordedFile
+                            val duration = recordingTimer
+                            if (fileToUpload != null && fileToUpload.exists() && duration > 0) {
+                                isUploadingAudio = true
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                    val storageRepo = com.example.homeserve.data.StorageRepository()
+                                    val uri = android.net.Uri.fromFile(fileToUpload)
+                                    val url = storageRepo.uploadFile(context, uri, "chat_audios")
+                                    isUploadingAudio = false
+                                    if (url != null) {
+                                        viewModel.sendVoiceMessage(url, duration)
+                                    } else {
+                                        Toast.makeText(context, "Failed to upload voice note", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            recordedFile = null
+                        },
+                        shape = CircleShape,
+                        containerColor = Color(0xFF10B981),
+                        contentColor = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Stop,
+                            contentDescription = "Stop & Send",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        if (isUploadingImage) {
+                            CircularProgressIndicator(color = BrandBlue, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = "Send Image",
+                                tint = BrandBlue
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = textInput,
+                        onValueChange = { textInput = it },
+                        placeholder = { Text("Write a message...", color = Color(0xFF9CA3AF)) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(24.dp),
+                        maxLines = 4,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF111827),
+                            unfocusedTextColor = Color(0xFF111827),
+                            focusedContainerColor = Color(0xFFF3F4F6),
+                            unfocusedContainerColor = Color(0xFFF3F4F6),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            cursorColor = BrandBlue
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    if (textInput.isBlank()) {
+                        FloatingActionButton(
+                            onClick = {
+                                val checkPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                                if (checkPermission == PackageManager.PERMISSION_GRANTED) {
+                                    startRecording()
+                                } else {
+                                    requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
+                            shape = CircleShape,
+                            containerColor = BrandBlue,
+                            contentColor = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            if (isUploadingAudio) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "Record Voice Note",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        FloatingActionButton(
+                            onClick = {
+                                if (textInput.isNotBlank()) {
+                                    viewModel.sendMessage(textInput.trim())
+                                    textInput = ""
+                                }
+                            },
+                            shape = CircleShape,
+                            containerColor = BrandBlue,
+                            contentColor = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Send Message",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // Price Update Dialog
+    if (showPriceUpdateDialog) {
+        var newPrice by remember { mutableStateOf(bookingInfo?.totalAmount?.toString() ?: "") }
+        var priceError by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { showPriceUpdateDialog = false },
+            containerColor = Color.White,
+            title = { Text("Update Service Price", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter the renegotiated price in PKR. Both you and the customer will see the updated amount.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4B5563)
+                    )
+                    OutlinedTextField(
+                        value = newPrice,
+                        onValueChange = { input ->
+                            if (input.length <= 6) {
+                                newPrice = input.filter { it.isDigit() }
+                            }
+                        },
+                        label = { Text("New Price (Rs.)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrandBlue,
+                            cursorColor = BrandBlue
+                        )
+                    )
+                    if (priceError != null) {
+                        Text(
+                            text = priceError ?: "",
+                            color = Color(0xFFDC2626),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val priceInt = newPrice.trim().toIntOrNull()
+                        if (priceInt == null || priceInt <= 0) {
+                            priceError = "Please enter a valid price."
+                            return@Button
+                        }
+                        viewModel.updateBookingPrice(priceInt) { success ->
+                            if (success) {
+                                showPriceUpdateDialog = false
+                            } else {
+                                priceError = "Failed to update price. Please try again."
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                ) {
+                    Text("Update", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPriceUpdateDialog = false }) {
+                    Text("Cancel", color = Color(0xFF6B7280), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 }
 
@@ -368,11 +695,29 @@ private fun MessageBubble(
             modifier = Modifier.widthIn(max = 290.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
-                    color = textColor
-                )
+                if (message.voiceUrl.isNotEmpty()) {
+                    VoicePlayBubble(
+                        voiceUrl = message.voiceUrl,
+                        duration = message.voiceDuration,
+                        isCurrentUser = isCurrentUser
+                    )
+                } else if (message.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = message.imageUrl,
+                        contentDescription = "Image message",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                        color = textColor
+                    )
+                }
                 
                 if (timeString.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(2.dp))
@@ -397,6 +742,101 @@ private fun MessageBubble(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun VoicePlayBubble(
+    voiceUrl: String,
+    duration: Int,
+    isCurrentUser: Boolean
+) {
+    val context = LocalContext.current
+    var isPlaying by remember { mutableStateOf(false) }
+    var mediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+    
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                mediaPlayer?.release()
+            } catch (e: Exception) {}
+        }
+    }
+    
+    val displayDuration = remember(duration) {
+        val mins = duration / 60
+        val secs = duration % 60
+        String.format(Locale.getDefault(), "%d:%02d", mins, secs)
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        IconButton(
+            onClick = {
+                if (isPlaying) {
+                    try {
+                        mediaPlayer?.stop()
+                        mediaPlayer?.release()
+                        mediaPlayer = null
+                        isPlaying = false
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                } else {
+                    try {
+                        val player = android.media.MediaPlayer().apply {
+                            setDataSource(voiceUrl)
+                            prepareAsync()
+                            setOnPreparedListener {
+                                start()
+                            }
+                            setOnCompletionListener {
+                                isPlaying = false
+                                release()
+                                mediaPlayer = null
+                            }
+                            setOnErrorListener { _, _, _ ->
+                                isPlaying = false
+                                release()
+                                mediaPlayer = null
+                                true
+                            }
+                        }
+                        mediaPlayer = player
+                        isPlaying = true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Toast.makeText(context, "Cannot play audio", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            modifier = Modifier
+                .background(if (isCurrentUser) Color.White.copy(alpha = 0.2f) else BrandBlue.copy(alpha = 0.1f), CircleShape)
+                .size(36.dp)
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = "Play voice note",
+                tint = if (isCurrentUser) Color.White else BrandBlue,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        
+        Column {
+            Text(
+                text = "Voice Message",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = if (isCurrentUser) Color.White else Color(0xFF111827)
+            )
+            Text(
+                text = displayDuration,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color(0xFF6B7280)
+            )
         }
     }
 }

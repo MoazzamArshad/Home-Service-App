@@ -264,62 +264,43 @@ fun BookingsScreen(
             }
         }
 
-        if (activeTab == "current" && bookings.isNotEmpty()) {
-            val currentBooking = bookings.first()
-            BookingDetailsContent(
-                booking = currentBooking,
-                onCancelClick = { bookingToCancel = currentBooking },
-                onCompleteClick = {
-                    if (!NetworkUtils.isNetworkAvailable(context)) {
-                        Toast.makeText(context, "No network connection. Cannot mark as completed.", Toast.LENGTH_LONG).show()
-                    } else {
-                        viewModel.completeBooking(currentBooking.bookingId)
-                    }
-                },
-                onRateClick = { onRateClick(currentBooking.bookingId) },
-                onChatClick = { onChatClick(currentBooking.bookingId) },
-                onPhotoClick = { zoomedPhotoUrlMain = it },
-                modifier = Modifier.weight(1f)
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                if (bookings.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            if (activeTab == "current") {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("No ongoing request", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF4B5563))
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Book a new service to get started", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF9CA3AF))
-                                }
-                            } else {
-                                Text("No bookings found in this category", color = Color(0xFF6B7280))
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (bookings.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        if (activeTab == "current") {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("No ongoing request", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF4B5563))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Book a new service to get started", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF9CA3AF))
                             }
+                        } else {
+                            Text("No bookings found in this category", color = Color(0xFF6B7280))
                         }
                     }
-                } else {
-                    items(bookings) { booking ->
-                        BookingCard(
-                            booking = booking,
-                            allProvidersMap = allProvidersMap,
-                            onRateClick = { onRateClick(booking.bookingId) },
-                            onCompleteClick = {
-                                if (!NetworkUtils.isNetworkAvailable(context)) {
-                                    Toast.makeText(context, "No network connection. Cannot mark as completed.", Toast.LENGTH_LONG).show()
-                                } else {
-                                    viewModel.completeBooking(booking.bookingId)
-                                }
-                            },
-                            onCancelClick = { bookingToCancel = booking },
-                            onChatClick = { onChatClick(booking.bookingId) },
-                            onPhotoClick = { zoomedPhotoUrlMain = it },
-                            onClick = { selectedBookingDetails = booking }
-                        )
-                    }
+                }
+            } else {
+                items(bookings) { booking ->
+                    BookingCard(
+                        booking = booking,
+                        allProvidersMap = allProvidersMap,
+                        onRateClick = { onRateClick(booking.bookingId) },
+                        onCompleteClick = {
+                            if (!NetworkUtils.isNetworkAvailable(context)) {
+                                Toast.makeText(context, "No network connection. Cannot mark as completed.", Toast.LENGTH_LONG).show()
+                            } else {
+                                viewModel.completeBooking(booking.bookingId)
+                            }
+                        },
+                        onCancelClick = { bookingToCancel = booking },
+                        onChatClick = { onChatClick(booking.bookingId) },
+                        onPhotoClick = { zoomedPhotoUrlMain = it },
+                        onClick = { selectedBookingDetails = booking }
+                    )
                 }
             }
         }
@@ -432,7 +413,7 @@ private fun BookingCard(
                     StatusBadge(status = booking.status)
                 }
                 Text(
-                    text = "$${booking.totalAmount}",
+                    text = "Rs. ${booking.totalAmount}",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = BrandBlue
                 )
@@ -788,7 +769,7 @@ fun BookingDetailsContent(
                             color = Color(0xFF111827)
                         )
                         Text(
-                            text = "$${booking.totalAmount}",
+                            text = "Rs. ${booking.totalAmount}",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = BrandBlue
                         )
