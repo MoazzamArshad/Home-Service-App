@@ -33,44 +33,9 @@ class ProviderViewModel : ViewModel() {
         onCodeSent: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-        val callbacks = object : com.google.firebase.auth.PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-            override fun onVerificationCompleted(credential: com.google.firebase.auth.PhoneAuthCredential) {
-                viewModelScope.launch {
-                    try {
-                        auth.signInWithCredential(credential).await()
-                        setProviderId(phone) {
-                            onCodeSent()
-                        }
-                    } catch (e: Exception) {
-                        onError(e.message ?: "Verification failed")
-                    }
-                }
-            }
-
-            override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
-                onError(e.message ?: "Verification failed")
-            }
-
-            override fun onCodeSent(
-                verId: String,
-                token: com.google.firebase.auth.PhoneAuthProvider.ForceResendingToken
-            ) {
-                verificationId = verId
-                onCodeSent()
-            }
-        }
-
-        val formattedPhone = if (phone.startsWith("+")) phone else phone.trim()
-
-        val options = com.google.firebase.auth.PhoneAuthOptions.newBuilder(auth)
-            .setPhoneNumber(formattedPhone)
-            .setTimeout(60L, java.util.concurrent.TimeUnit.SECONDS)
-            .setActivity(activity)
-            .setCallbacks(callbacks)
-            .build()
-
-        com.google.firebase.auth.PhoneAuthProvider.verifyPhoneNumber(options)
+        // Mock OTP sending: immediately call success callback
+        verificationId = "mock_verification_id"
+        onCodeSent()
     }
 
     fun verifyOtp(
@@ -78,20 +43,12 @@ class ProviderViewModel : ViewModel() {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        if (verificationId.isEmpty()) {
-            onError("Verification ID is missing. Please request a new code.")
-            return
+        // Mock OTP verification: accept any code matching "123456"
+        if (code == "123456") {
+            onSuccess()
+        } else {
+            onError("Invalid OTP code. Please enter 123456.")
         }
-        val credential = com.google.firebase.auth.PhoneAuthProvider.getCredential(verificationId, code)
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-        auth.signInWithCredential(credential)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onSuccess()
-                } else {
-                    onError(task.exception?.message ?: "Invalid OTP code.")
-                }
-            }
     }
 
     private val _providerProfile = MutableStateFlow<Provider?>(null)
